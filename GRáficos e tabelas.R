@@ -23,20 +23,20 @@ PLS_veic <- sqlFetch(chan1,"cons_veic_a")
 close(chan1)
 
 #Criar os dados que interessam
-d <- PLS_Totais %>% filter(ano %in% c("2016","2017","2018","2019","2020","2021")) %>%
-  mutate(mes = case_when(
-    mes == 1 ~"Jan",
-    mes == 2 ~"Fev",
-    mes == 3 ~"Mar",
-    mes == 4 ~"Abr",
-    mes == 5 ~"Mai",
-    mes == 6 ~"Jun",
-    mes == 7 ~"Jul",
-    mes == 8 ~"Ago",
-    mes == 9 ~"Set",
-    mes == 10 ~"Out",
-    mes == 11 ~"Nov",
-    mes == 12 ~"Dez"
+d <- PLS_Totais %>% filter(ano %in% c("2016","2017","2018","2019","2020","2021"), mes %in% 1:12) %>%
+    mutate(mes = case_when(
+      mes == 1 ~"Jan",
+      mes == 2 ~"Fev",
+      mes == 3 ~"Mar",
+      mes == 4 ~"Abr",
+      mes == 5 ~"Mai",
+      mes == 6 ~"Jun",
+      mes == 7 ~"Jul",
+      mes == 8 ~"Ago",
+      mes == 9 ~"Set",
+      mes == 10 ~"Out",
+      mes == 11 ~"Nov",
+      mes == 12 ~"Dez"
   )
   )
 #colocar meses em ordem
@@ -55,14 +55,14 @@ d$`Mes/Ano` <- factor(d$`Mes/Ano`,levels=paste(d$mes, d$ano, sep = "/"),
                       ordered = TRUE)
 PLS_veic$ano=as.factor(PLS_veic$ano)
 
-asspe_colors <- c("#284194","#2191fb","#023618","#61988E","#ee7646")
+asspe_colors <- c("#284194","#2191fb","#023618","#61988E","#ee7646","#820900")
 
 rm(PLS_Anuais_A_E,PLS_Totais)
 # Consumo de papel total (CPt) ---------------------------------------------------------------------
 
 
 
-#Tabela usando flextable e opção valign (alinhamento vertical) elinha de Total
+#Tabela usando flextable e opção valign (alinhamento vertical) e linha de Total
 tabCPp <- d %>% select(ano, mes, cpt) %>% spread(ano,cpt) %>%
   #  mutate_at(vars(mes), funs(as.character(.))) %>%
   bind_rows(summarise(.,mes = "Total",
@@ -102,10 +102,14 @@ d %>% group_by(ano) %>% summarise(cpt = sum(cpt)) %>%
   scale_fill_manual(values = asspe_colors)+ylab("CPt\n(Resmas)") + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
-## variação
-CPt <- d %>% group_by(ano) %>% summarise(CPt = sum(cpt)) 
 
-Cpt_var<- ((CPt$CPt[5]/CPt$CPt[3])-1)*100
+## variação até outubro
+
+CPt <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+  group_by(ano) %>% summarise(CPt = sum(cpt)) %>% pull(CPt)
+
+CPt_var<- ((CPt[2]/CPt[1])-1)*100
+
 
 
 # Gasto de papel próprio (GPp) ---------------------------------------------------------------------
@@ -118,19 +122,21 @@ tabGPp <- d %>% select(ano, mes, gpp) %>% spread(ano,gpp) %>%
                       `2017` = sum(`2017`,na.rm = TRUE),
                       `2018` = sum(`2018`,na.rm = TRUE),
                       `2019` = sum(`2019`,na.rm = TRUE), 
-                      `2020` =sum(`2020`,na.rm = TRUE))) %>% rename(Mês = `mes`) 
+                      `2020` = sum(`2020`,na.rm = TRUE),
+                      `2021` = sum(`2021`,na.rm = TRUE)))%>% rename(Mês = `mes`) 
 tabGPp %>% mutate_if(is.numeric, format, big.mark=".",nsmall = 2) %>% flextable() %>% 
   valign( valign = "center", part = "all") %>%  
   set_caption( "Indicador 2.10 - $GP_p$") %>% align(j=1, align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% bold(bold = TRUE, i = nrow(tabGPp)) %>%
   autofit()
 
-#gráfico de 18/20
-d %>% filter(ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=gpp, group = ano))+ theme_bw()+
+#gráfico de 19/21
+d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=gpp, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, 
                 linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
-  geom_label_repel(aes(label=format(gpp, big.mark = ".", nsmall = 2, digits = 2), fill= ano, fontface="bold"),color="white")+
+  geom_label_repel(aes(label=format(gpp, big.mark = ".", nsmall = 2, digits = 2), fill= ano, fontface="bold"),
+                   color="white",size = 3)+
   scale_color_manual(values = asspe_colors[c(3,5)])+
   scale_fill_manual(values = asspe_colors[c(3,5)])+
   ylab("GPp\n(R$)") + xlab("Mês")+
@@ -149,17 +155,27 @@ d %>% group_by(ano) %>% summarise(gpp = sum(gpp)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
+## variação até outubro
+
+GPp <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+  group_by(ano) %>% summarise(GPp = sum(gpp)) %>% pull(GPp)
+
+GPp_var<- ((GPp[2]/GPp[1])-1)*100
+
 # Gastos Relativos Telefonia fixa - GRtf ----------------------------------------
 
 tabGRTf <- d %>% select(ano, mes,grtf) %>% spread(ano,grtf) %>% 
-  rename(Mês = `mes`) %>% flextable() %>% colformat_double(j=c(2:6),big.mark=".",decimal.mark = ",",digits=2)  %>% 
-  set_caption( "Indicador 6.3 - $GRT_f$") %>% align(j=1, align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% autofit()
+  rename(Mês = `mes`) %>% flextable() %>% colformat_double(j=c(2:7),big.mark=".",decimal.mark = ",",digits=2)  %>% 
+  set_caption( "Indicador 6.3 - $GRT_f$") %>% 
+  align(j=1, align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% 
+  valign( valign = "center", part = "all") %>% 
+  autofit()
 tabGRTf
 
-#graf 18/20
+#graf 19/21
 
-d %>% filter(ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=grtf, group = ano))+ theme_bw()+
+d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=grtf, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
   geom_label_repel(aes(label=format(grtf, big.mark = ".",digits = 2, nsmall = 2), 
@@ -183,13 +199,18 @@ d %>% group_by(ano) %>% summarise(grtf = mean(grtf)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
+# variação até outubro
+GRTf <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+  group_by(ano) %>% summarise(GRTf = mean(grtf)) %>% pull(GRTf)
+
+GRTf_var<- ((GRTf[2]/GRTf[1])-1)*100
 
 # Gastos Relativos Telefonia Móvel - GRTm ---------------------------------
 
 #Tabela
 tabGRTm <- d %>% select(ano, mes,grtm) %>% spread(ano,grtm) %>% 
   rename(Mês = `mes`) %>% flextable() %>% 
-  colformat_double(j=c(2:6),big.mark=".",decimal.mark = ",",digits=2)  %>% 
+  colformat_double(j=c(2:7),big.mark=".",decimal.mark = ",",digits=2)  %>% 
   set_caption( "Indicador 6.3 - $GRT_m$") %>% 
   align(j=1, align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% 
@@ -197,8 +218,8 @@ tabGRTm <- d %>% select(ano, mes,grtm) %>% spread(ano,grtm) %>%
   autofit()
 tabGRTm
 
-#graf 18/20
-filter(d,ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=grtm, group = ano))+ theme_bw()+
+#graf 19/21
+filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=grtm, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, 
                 linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
@@ -220,6 +241,12 @@ d %>% group_by(ano) %>% summarise(grtm = mean(grtm)) %>%
     expression(atop("Gasto médio anual"~GRT[m],"(R$ \\ linha móvel)"))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
+
+# variação até outubro
+GRTm <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+  group_by(ano) %>% summarise(GRTm = mean(grtm)) %>% pull(GRTm)
+
+GRTm_var<- ((GRTm[2]/GRTm[1])-1)*100
 
 # Consumo de Energia Elétrica - CE ----------------------------------------
 
