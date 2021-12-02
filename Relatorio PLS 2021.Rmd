@@ -1,4 +1,27 @@
-library(tidyverse)
+---
+bookdown::word_document2:
+  reference_docx: referencia.docx
+author: 
+ - Núcleo de Estatística da Gestão Estratégica
+ 
+
+  
+
+date: "`r format(Sys.time(), 'Compilado em %d de %B de %Y')`"
+
+
+
+output: 
+  bookdown::word_document2:
+    reference_docx: referencia.docx
+    toc: true
+
+title: "Avaliação Indicadores PLS - Consolidação dos dados mensais até outubro/2021"
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+library(tidyverse, warn.conflicts = FALSE)
 library(knitr)
 #library(kableExtra)
 library(flextable)
@@ -8,7 +31,6 @@ library(RODBC)
 options(OutDec = ",")
 set_flextable_defaults(decimal.mark = ",",big.mark = ".")
 
-#Pegar os dados direto do access mensais
 chan1 <- odbcDriverConnect("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=F:/Documents/PLS.accdb")
 PLS_Totais <- sqlFetch(chan1,"cons_todos_m")
 #Anuais relativos água e esgoto
@@ -82,16 +104,48 @@ FunVar <- function(d,indic, Soma = TRUE)
   
   list(Indicador = IND, Ind_Var=IND_var)
 }
+```
+
+# Objetivo
+
+|       Apresentar os resultados comparativos dos indicadores mensais disponíveis do Plano de Logística Sustentável (Resolução CNJ Nº 201/2015) até **outubro de 2021**. Para efeito de comparação, serão considerados dados referentes a 2019, ano não-eleitoral anterior a 2021,
+
+|   É extremamente importante salientar que a pandemia de Covid-19 não estava estabelecida em 2019, de modo que as comparações serão, no geral, superlativas.
 
 
+|       Serão indicados os resultados consolidados e representativos sobre o consumo e/ou gastos com:
 
+  * Papel;
+  * Telefonia;
+  * Energia elétrica;
+  * Água;
+  * Gestão de resíduos e;
+  * Combustível.
+  
 
+# Papel
 
-# Consumo de papel total (CPt) ---------------------------------------------------------------------
+|       Os resultados relativos ao item 2 - Papel serão apresentados considerando os indicadores gerais *2.7 - Consumo de papel total ($CP_t$)* e  *2.10 Gasto com papel próprio ($GP_p$)*.
 
+##  Consumo de papel total ($CP_t$)
 
+**Definição**: quantidade total consumida de resmas de papel, incluindo papel próprio e contratado, reciclado e não-reciclado.
 
-#Tabela usando flextable e opção valign (alinhamento vertical) e linha de Total
+Unidade de medida: resmas
+Fórmula:
+
+$$ CP_t = CP_{nrp} + CP_{rp} + CP_{nrc} + CP_{rc} $$ 
+
+onde:
+
+  * $CP_{nrp}$ – Consumo de papel não-reciclado próprio;
+  * $CP_{rp}$ – Consumo de papel reciclado próprio;
+  * $CP_{nrc}$ – Consumo de papel não-reciclado contratado e;
+  * $CP_{rc}$ – Consumo de papel reciclado contratado.
+  
+  <br>
+
+```{r tabCPp, echo=FALSE, warning=FALSE, paged.print=TRUE, results='asis'}
 tabCPp <- d %>% select(ano, mes, cpt) %>% spread(ano,cpt) %>%
   #  mutate_at(vars(mes), funs(as.character(.))) %>%
   bind_rows(summarise(.,mes = "Total",
@@ -108,7 +162,12 @@ tabCPp %>% mutate_if(is.numeric, format, big.mark=".")  %>% flextable() %>%
   bold(bold = TRUE, part = "header") %>% bold(bold = TRUE, i = nrow(tabCPp)) %>% 
   autofit()
 
-#gráfico de 2021
+```
+
+<br>
+
+```{r gCpt,fig.width= 7,fig.asp=0.65,fig.cap="$CP_t$ - 2019 e 2021",echo=FALSE}
+
 filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=cpt, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, 
                 linetype = ano),size = 1.1)+ 
@@ -120,9 +179,10 @@ filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=cpt, group = ano))+ t
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
+```
 
-#barplot
 
+```{r gCptAc,fig.width= 7,fig.asp=0.65,fig.cap="$CP_t$ acumulado - 2016 a 2021",echo = FALSE, message = FALSE}
 d %>% group_by(ano) %>% summarise(cpt = sum(cpt)) %>%  
   ggplot(mapping=aes(x=ano, y=cpt, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
   geom_label_repel(aes(label=format(cpt, big.mark = "."), fill= ano, fontface="bold"),
@@ -131,15 +191,37 @@ d %>% group_by(ano) %>% summarise(cpt = sum(cpt)) %>%
   scale_fill_manual(values = asspe_colors)+ylab("CPt\n(Resmas)") + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
+```
 
-## variação até outubro
+```{r Cpt_calc, echo=FALSE,include=FALSE}
 
+## variação
 CPt <- FunVar(d=d,indic = cpt)
 
+```
 
-# Gasto de papel próprio (GPp) ---------------------------------------------------------------------
+|       O agregado do consumo de papel total até outubro de em 2021 foi cerca de `r format(CPt$Indicador[2], big.mark=".")` resmas e no mesmo período de 2019, `r format(CPt$Indicador[1], big.mark=".")`, o que acarreta na **redução** de `r round(CPt$Ind_Var,1)`% entre esses dois períodos analisados.
 
-#Tabela usando flextable e opção valign (alinhamento vertical) elinha de Total
+##  Gasto com Papel Próprio ($GP_p$)
+
+**Definição**: despesa total realizada pelo órgão com a aquisição de resmas de
+papel. Não considerar a despesa referente ao papel fornecido por empresa
+contratada para serviços de impressão e reprografia.
+
+Unidade de medida: reais;
+
+Fórmula:
+
+$$GP_p = GP_{nrp} + GP_{rp} $$ onde,
+
+  * $GP_{nrp}$ – Gasto com papel não-reciclado próprio;
+  * $GP_{rp}$ – Gasto com papel reciclado próprio.
+ 
+
+
+  <br>
+
+```{r tabGPp, echo=FALSE, message=FALSE, paged.print=TRUE, results='asis'}
 
 tabGPp <- d %>% select(ano, mes, gpp) %>% spread(ano,gpp) %>%
   bind_rows(summarise(.,mes = "Total",
@@ -155,7 +237,20 @@ tabGPp %>% mutate_if(is.numeric, format, big.mark=".",nsmall = 2) %>% flextable(
   bold(bold = TRUE, part = "header") %>% bold(bold = TRUE, i = nrow(tabGPp)) %>%
   autofit()
 
-#gráfico de 19/21
+```
+
+<br>
+
+```{r GPp_calc, echo=FALSE,include=FALSE}
+
+GPp <- FunVar(d=d,indic = gpp)
+
+```
+
+|       O gasto de papel próprio total até outubro de 2021 foi de R\$ `r format(GPp$Indicador[2], big.mark=".", nsmall=2)` e em 2019 no mesmo período, R\$ `r format(GPp$Indicador[1], big.mark=".", nsmall=2)`, o que resultou na **redução** de `r round(GPp$Ind_Var,1)`%.
+
+```{r gGPp,,fig.width= 7,fig.asp=0.65,fig.cap="$GP_p$ - 2019 e 2021",echo=FALSE}
+
 d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=gpp, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, 
                 linetype = ano),size = 1.1)+ 
@@ -169,7 +264,9 @@ d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=gpp, group = ano)
                                                  scientific = FALSE))
 
 
-#barplot
+```
+0
+```{r gGPpAc,fig.width= 7,fig.asp=0.65,fig.cap="$GP_p$ acumulado - 2016 a 2021",echo = FALSE, message = FALSE}
 
 d %>% group_by(ano) %>% summarise(gpp = sum(gpp)) %>%  
   ggplot(mapping=aes(x=ano, y=gpp, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
@@ -179,23 +276,43 @@ d %>% group_by(ano) %>% summarise(gpp = sum(gpp)) %>%
   scale_fill_manual(values = asspe_colors)+ylab("GPp\n(R$)") + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
+```
 
-## variação até outubro
+# Telefonia
 
-GPp <- FunVar(d=d,indic = gpp)
+|       Os resultados relativos ao item 6 - Telefonia serão apresentados e  resumidos pelos indicadores *6.3 - $GRT_f$ – Gasto relativo com telefonia fixa* e *6.6 - $GRT_m$ – Gasto relativo com telefonia móvel*. Os valores são mensurados pela **SAM** no TRE-SP.
 
-# Gastos Relativos Telefonia fixa - GRtf ----------------------------------------
+##  Gasto relativo com telefonia fixa ($GRT_f$)
+
+**Definição**: despesa realizada com serviços de telefonia fixa, inclusive tecnologia VoIP, em relação ao total de linhas. Considera-se evento gerador o mês de competência (ao qual a fatura corresponde).
+
+Unidade de medida: reais / linha telefônica fixa.
+
+Fórmula:	$$ GRT_f = \frac{GT_f}{LT_f}$$  onde:
+
+  * $GT_f$ – Gasto total com telefonia fixa e;
+  * $LT_f$ – Linhas telefônicas fixas. 
+  
+ <br>
+
+```{r tabGRTf, echo=FALSE, paged.print=TRUE, results='asis'}
 
 tabGRTf <- d %>% select(ano, mes,grtf) %>% spread(ano,grtf) %>% 
   rename(Mês = `mes`) %>% flextable() %>% colformat_double(j=c(2:7),big.mark=".",decimal.mark = ",",digits=2)  %>% 
-  set_caption( "Indicador 6.3 - $GRT_f$") %>% 
+  set_caption( "Indicador 6.3 - GRTf") %>% 
   align(align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% 
   valign( valign = "center", part = "all") %>% 
   autofit()
 tabGRTf
+```
 
-#graf 19/21
+<br>
+
+|       O TRE-SP dispunha de **1.846** de linhas fixas no período analisado de 2019 e 2021 (janeiro a outubro de ambos anos). A evolução gráfica do indicador é apresentada a seguir.
+
+
+```{r gGRTf, fig.width= 7,fig.asp=0.65,fig.cap="$GRT_f$ - 2019 e 2021",echo=FALSE}
 
 d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=grtf, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
@@ -207,9 +324,19 @@ d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=grtf, group = ano
   ylab(expression(atop(~GRT[f],"(R$ \\ linha fixa)"))) + xlab("Mês")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
+```
 
+```{r GPRTf_calc, echo=FALSE,include=FALSE}
 
-#barplot
+GRTf <- FunVar(d=d,indic = grtf, Soma = FALSE)
+
+```
+
+|       O *gasto relativo médio de telefonia fixa* até outubro de 2021 foi cerca de R\$ `r format(GRTf$Indicador[2], big.mark=".", digits=2, nsmall=2)` e a média de janeiro a outubro de 2021, R\$ `r format(GRTf$Indicador[1], big.mark=".", digits=2, nsmall=2)`, de modo que a *redução* de `r round(GRTf$Ind_Var,1)`% foi observada.
+
+|       A ilustração a seguir representa a evolução dos gastos médios com Telefonia fixa desde 2016.
+
+```{r grtfAc,fig.width= 7,fig.asp=0.65,fig.cap="$GRT_f$ médio - 2016 a 2021",echo = FALSE, message = FALSE}
 
 d %>% group_by(ano) %>% summarise(grtf = mean(grtf)) %>%  
   ggplot(mapping=aes(x=ano, y=grtf, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
@@ -221,24 +348,42 @@ d %>% group_by(ano) %>% summarise(grtf = mean(grtf)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
-# variação até outubro -  média
+```
 
-GRTf <- FunVar(d=d,indic = grtf, Soma = FALSE)
+##  Gasto relativo com telefonia móvel ($GRT_m$)
 
-# Gastos Relativos Telefonia Móvel - GRTm ---------------------------------
+**Definição**: despesa realizada com pagamento das faturas de telefonia móvel em relação à quantidade de linhas móveis. São contabilizados gastos com voz, dados e assinatura. Considera-se evento gerador o mês de competência (ao qual a fatura corresponde) 
 
+Unidade de medida: reais / linha telefônica móvel.
+
+Fórmula:	$$ GRT_m = \frac{GT_m}{LT_m}$$  onde:
+
+  * $GT_m$ – Gasto total com telefonia móvel e;
+  * $LT_m$ – Linhas telefônicas móvel. 
+
+<br>
+
+|       A tabela a seguir mostra os valores apurados para o indicador juntamente com a visualização gráfica.
+
+```{r tabGRTm, echo=FALSE, paged.print=TRUE, results='asis'}
 #Tabela
 tabGRTm <- d %>% select(ano, mes,grtm) %>% spread(ano,grtm) %>% 
   rename(Mês = `mes`) %>% flextable() %>% 
   colformat_double(j=c(2:7),big.mark=".",decimal.mark = ",",digits=2)  %>% 
-  set_caption( "Indicador 6.3 - $GRT_m$") %>% 
+  set_caption( "Indicador 6.3 - GRTm") %>% 
   align(align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% 
   valign( valign = "center", part = "all") %>% 
   autofit()
 tabGRTm
+```
 
-#graf 19/21
+<br>
+
+|       Em todo ano de 2019 e dejaneiro a julho de 2021, o TRE dispunha de **27 linhas móveis**. A partir de agosto de 2021, foram disponibilizadas **430 linhas móveis**.
+
+```{r gGRTm, fig.width= 7,fig.asp=0.65,fig.cap="$GRT_m$ - 2019 e 2021",echo=FALSE}
+
 filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=grtm, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, 
                 linetype = ano),size = 1.1)+ 
@@ -250,9 +395,24 @@ filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=grtm, group = ano))+ 
   ylab(expression(atop(~GRT[m],"(R$ \\ linha móvel)"))) + xlab("Mês")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",digits = 2, nsmall = 2, 
                                                  scientific = FALSE))
-#barplot
+```
 
-d %>% group_by(ano) %>% summarise(grtm = mean(grtm)) %>%  
+```{r GPRTm_calc, echo=FALSE,include=FALSE}
+
+# variação até outubro - média
+
+GRTm <- FunVar(d=d,indic = grtm, Soma = FALSE)
+
+```
+
+|       O gasto relativo médio de telefonia móvel de janeiro a outubro de 2019 e 2021 foram de  R\$ `r format(GRTm$Indicador[1], big.mark=".", nsmall=2,digits=2)` e R\$ `r format(GRTm$Indicador[2], big.mark=".", nsmall=2,digits=2)`, respectivamente, com *redução* de `r round(GRTm$Ind_Var,1)`%, ainda que tenha havido um aumento significativo do número de linhas. 
+
+|       Vale salientar que o valor médio apurado em agosto de 2021, de R$ 2,14, bem discrepante dos demais, deveu-se ao pagamento das faturas *pro-rata* após a contratação de novas linhas móveis.
+
+|
+```{r teste, echo=FALSE}
+
+h <- d %>% group_by(ano) %>% summarise(grtm = mean(grtm)) %>%  
   ggplot(mapping=aes(x=ano, y=grtm, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
   geom_label_repel(aes(label=format(grtm, big.mark = ".",digits = 2, nsmall = 2), fill= ano, fontface="bold"),
                    color="white",vjust=0)+
@@ -261,14 +421,30 @@ d %>% group_by(ano) %>% summarise(grtm = mean(grtm)) %>%
     expression(atop("Gasto médio anual"~GRT[m],"(R$ \\ linha móvel)"))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
+print(h)
 
-# variação até outubro - média
+```
 
-GRTm <- FunVar(d=d,indic = grtm, Soma = FALSE)
+```{r GgrtmAc,fig.width= 7,fig.asp=0.65,fig.cap="$GRT_m$ médio - 2016 a 2020",echo = FALSE, message = FALSE}
+print(h)
 
-# Consumo de Energia Elétrica - CE ----------------------------------------
+```
 
-#Tabela CE
+
+
+# Energia Elétrica
+
+|       Os resultados relativos ao item 7 - Energia elétrica serão apresentados utilizando os indicadores *7.1 - CE – Consumo de Energia Elétrica* e *7.3 - GE – Gasto com energia elétrica*. Os valores são mensurados pela **SAM** no TRE-SP.
+
+##  Consumo de Energia Elétrica ($CE$)
+
+**Definição**: consumo total de energia elétrica fornecida pela concessionária.
+
+Unidade de medida: kWh 
+
+<br>
+
+```{r tabCE, echo=FALSE, paged.print=TRUE, results='asis'}
 tabCE <- d %>% select(ano, mes, cee) %>% spread(ano,cee) %>%
   #  mutate_at(vars(mes), funs(as.character(.))) %>%
   bind_rows(summarise(.,mes = "Total",
@@ -288,8 +464,12 @@ tabCE <- tabCE %>% flextable() %>%
   bold(bold = TRUE, i = nrow(tabCE)) %>% 
   autofit()
 tabCE
+```
 
-#graf 19/21
+<br>
+
+```{r gCE, fig.width= 7,fig.asp=0.65,fig.cap= "$CE$ - 2019 e 2021",echo=FALSE}
+
 filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=cee, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
@@ -300,26 +480,55 @@ filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=cee, group = ano))+ t
   scale_y_continuous(name="CE\n(Kwh)", labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
   xlab("Mês")
 
-#barplot Soma CE
+```
 
-d %>% group_by(ano) %>% summarise(cee = sum(cee)) %>%  
-  ggplot(mapping=aes(x=ano, y=cee, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
-  geom_label_repel(aes(label=format(cee, big.mark = ".",digits = 2, nsmall = 1),
-                       fill= ano, fontface="bold"),
-                   color = "white", vjust=0)+
-  scale_color_manual(values = asspe_colors)+
-  scale_fill_manual(values = asspe_colors)+ylab(
-    expression(atop("Consumo bruto anual"~CE,"(KWh)"))) + xlab("Ano")+
-  scale_y_continuous(labels = function(x) format(x, big.mark = ".",
-                                                 scientific = FALSE))
+```{r CE_calc, echo=FALSE,include=FALSE}
 
 # variação até outubro
 CEE <- FunVar(d=d,indic = cee)
 
-## Consumo Relativo de EE (CRE)
+```
 
-#Tabela cRE
+|       O gráfico \@ref(fig:gCE) representa a evolução do consumo total de energia elétrica pelo TRE-SP. Em 2019 foram consumidos `r format(CEE$Indicador[1], big.mark=".", nsmall=1)`KWh,e de janeiro a outubro de 2021, `r format(CEE$Indicador[2], big.mark=".", nsmall=1)` KWh. Assim, observa-se que  houve  *redução* de `r round(CEE$Ind_Var,1)`% do consumo no período em estudo. Observa-se que, com o retorno dos trabalhos presenciais a partir de julho de 2021, o consumo de energia tem tendência ascendente após quedas expressivas, decorrentes provavelmente do trabalho remoto e estações do ano mais frias.
 
+|       A figura \@ref(fig:ceAc) apresenta o total agregado de KWh consumidos nos anos de 2016 a 2021.
+
+```{r ceAc,fig.width= 7,fig.asp=0.65,fig.cap="$CE$ Total anual - 2016 a 2021",echo = FALSE, message = FALSE}
+
+d %>% group_by(ano) %>% summarise(ge = sum(ge)) %>%  
+  ggplot(mapping=aes(x=ano, y=ge, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
+  geom_label(aes(label=format(ge, big.mark = ".",digits = 2, nsmall = 2), fill= ano, fontface="bold"),
+                   color="white",vjust=2)+
+  scale_color_manual(values = asspe_colors)+
+  scale_fill_manual(values = asspe_colors)+ylab(
+    expression(atop("Gasto bruto anual"~GE,"(R$)"))) + xlab("Ano")+
+  scale_y_continuous(labels = function(x) format(x, big.mark = ".",
+                                                 scientific = FALSE))
+
+```
+
+##  Consumo relativo de Energia Elétrica ($CRE$)
+
+
+**Definição**: consumo total de energia elétrica fornecida pela concessionária em relação à área total do órgão.
+
+Unidade de medida: $kWh/m^{2}$
+
+Periodicidade da apuração: anual 
+
+Fórmula:	$$ CRE = \frac{CE}{m^{2}~Total}$$  onde:
+
+  * $CE$ – Consumo de energia elétrica;
+  * $m^{2}~Total$ – Área total em metros quadrados (informado no Justiça em Números). 
+  
+|       A apuração do $CRE$ é dependente da áreas prediais das unidades pertencentes a este TRE. Essa informação é apurada anualmente pela **SGS** e informada no Justiça em Números.
+
+
+<br>
+
+|       A área total abarcada pelas unidades do TRE-SP ($m^{2}$) e o CRE ($kWh/m^{2}$) de 2016 a 2021 (dado referente a 2020), como informado no Justiça em Números, é apresentada na tabela \@ref(tab:tabm2Tt).
+
+```{r tabm2Tt, echo=FALSE, paged.print=TRUE, results='asis'}
 tabm2Tot <- d_anual %>% select(ano,m2Total,cre) %>% 
   rename(Ano = `ano`) %>% rename(`m2 Total` = m2Total) %>% 
   rename(CRE = `cre`) %>% 
@@ -331,22 +540,23 @@ tabm2Tot <- d_anual %>% select(ano,m2Total,cre) %>%
   bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
   autofit()
 tabm2Tot
+```
+<br>
 
-#Evolução da área construída TRE
-ggplot(d_anual, aes(x=ano,y= m2Total, fill=ano))+ theme_bw()+
-  geom_bar(stat='identity')+ 
- # geom_point(shape=21, size=5,color=asspe_colors[1], fill=asspe_colors[1])+
-  geom_label_repel(aes(label=format(m2Total, big.mark = "."),
-                       fill= ano, fontface="bold"), 
-                   color="white")+
-  scale_color_manual(values = asspe_colors)+
-  scale_fill_manual(values = asspe_colors)+
-  #Aqui retira o formato de número científico
-  scale_y_continuous(name=expression(~m^{2}~Total), 
-                     labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
-  xlab("Ano")
+```{r CRE_calc, echo=FALSE,include=FALSE}
 
-# GRáfico CRE
+#Media
+CRE <- d_anual %>% select(cre) %>% pull()
+
+#variação
+CRE_var <- ((CRE[6]/CRE[4])-1)*100
+
+
+```
+
+|       O *Consumo relativo de Energia Elétrica*, $CRE$ de 2021, consolidado até outubro, foi apurado em `r format(CRE[6], big.mark=".", nsmall=2,digits=2)` $kWh/m^{2}$, enquanto o valor deste indicador foi de `r format(CRE[4], big.mark=".", nsmall=2,digits=2)` $kWh/m^{2}$ em 2019. A comparação destes anos aponta uma retração de  `r round(CRE_var,1)`% do consumo relativo de energia elétrica. A evolução anual dos resultados do consumo relativo pode ser visualizada na figura \@ref(fig:gCRE).
+
+```{r gCRE,fig.width= 7,fig.asp=0.65,fig.cap="$CRE$  2016 a 2021",echo = FALSE, message = FALSE}
 
 d_anual %>%  ggplot(aes(x=ano,y=cre, group = 1))+ theme_bw()+
   geom_line(size = 1.1,color=asspe_colors[3])+ 
@@ -362,18 +572,19 @@ d_anual %>%  ggplot(aes(x=ano,y=cre, group = 1))+ theme_bw()+
                      limits = c(0,35))+ 
   xlab("Ano")
 
-#Comparação
+```
 
-#Media
-CRE <- d_anual %>% select(cre) %>% pull()
+## Gasto com Energia Elétrica (GE)
 
-#variação
-CRE_var <- ((CRE[6]/CRE[4])-1)*100
+**Definição**: valor da fatura de energia elétrica, em valores brutos. Considera-se evento gerador o mês de competência (ao qual a fatura corresponde).
 
-# Gasto de Energia Elétrica - GE ----------------------------------------
+Unidade de medida: Reais
 
+<br>
 
-#Tabela GE
+```{r tabGE, echo=FALSE, paged.print=TRUE, results='asis'}
+
+#Tabela usando flextable
 tabGE <- d %>% select(ano, mes, ge) %>% spread(ano,ge) %>%
   #  mutate_at(vars(mes), funs(as.character(.))) %>%
   bind_rows(summarise(.,mes = "Total",
@@ -391,8 +602,12 @@ tabGE <- tabGE %>% flextable() %>%
   bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
   bold(bold = TRUE, i = nrow(tabGE)) %>%  autofit()
 tabGE
+```
 
-#graf 19/21
+<br>
+
+```{r gGE, fig.width= 7,fig.asp=0.65,fig.cap= "$GE$ - 2019 e 2021",echo=FALSE}
+
 filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ge, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
@@ -404,22 +619,55 @@ filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ge, group = ano))+ th
   scale_y_continuous(name="GE\n(R$)", labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
   xlab("Mês")
 
-#barplot Soma GE
+```
+
+|       No gráfico com a evolução mensal dos gastos de energia (figura \@ref(fig:gGE)), o que se nota é o aumento expressivo no valor das faturas de energia elétrica após junho/2021, decorrentes do retorno das atividades presenciais e aumento da energia elétrica.
+
+```{r GE_calc, echo=FALSE,include=FALSE}
+
+GE <- FunVar(d=d,indic = ge)
+```
+|       Os gastos totais anuais em Energia Elétrica, expressos em Real, resultam nos valores de R\$`r format(GE$Indicador[1], big.mark=".", nsmall=2)`; R\$`r format(GE$Indicador[2], big.mark=".", nsmall=2)` para os meses de janeiro a outubro dos anos de 2019 e 2021, respectivamente. A comparação indica que houve redução de `r round(GE$Ind_Var,1)`% no valor pago pela eletricidade às concessionárias.
+
+|       A figura \@ref(fig:gGEAc) indica o gasto acumulado de energia elétrica nos anos de 2016 a 2021.
+
+
+```{r gGEAc, fig.width= 7,fig.asp=0.65,fig.cap= "$GE$ Total anual - 2016 a 2021",echo=FALSE,message = FALSE}
 
 d %>% group_by(ano) %>% summarise(ge = sum(ge)) %>%  
   ggplot(mapping=aes(x=ano, y=ge, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
   geom_label(aes(label=format(ge, big.mark = ".",digits = 2, nsmall = 2), fill= ano, fontface="bold"),
-             color="white",vjust=2)+
+                   color="white",vjust=2)+
   scale_color_manual(values = asspe_colors)+
   scale_fill_manual(values = asspe_colors)+ylab(
     expression(atop("Gasto bruto anual"~GE,"(R$)"))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
-# variação até outubro 
-GE <- FunVar(d=d,indic = ge)
 
-## Gasto Relativo de EE (GRE)
+```
 
+##  Gasto relativo com Energia Elétrica ($GRE$)
+
+
+**Definição**: valor total das faturas de energia elétrica, em valores brutos, em relação à área total do órgão. Considera-se evento gerador o mês de competência (ao qual a fatura corresponde)
+
+Unidade de medida: $R\$/m^{2}$
+
+Periodicidade da apuração: anual 
+
+Fórmula:	$$ GRE = \frac{GE}{m^{2}~Total}$$  onde:
+
+  * $GE$ – Gasto com energia elétrica;
+  * $m^{2}~Total$ – Área total em metros quadrados (informado no Justiça em Números). 
+  
+|       A apuração do $GRE$ é dependente da áreas prediais das unidades pertencentes a este TRE. Essa informação é apurada anualmente pela **SGS** e informada no Justiça em Números.
+
+
+<br>
+
+|       A tabela \@ref(tab:tabGRE) apresenta a área total do TRE e o gasto relativo de energia elétrica (GRE) apurado em cada ano desde 2016.    
+
+```{r tabGRE, echo=FALSE, warning=FALSE, paged.print=TRUE, results='asis'}
 #tabela
 tabgre <- d_anual %>% select(ano,m2Total,gre) %>% 
   rename(Ano = `ano`) %>% rename(`m2 Total` = m2Total) %>% 
@@ -433,8 +681,22 @@ tabgre <- d_anual %>% select(ano,m2Total,gre) %>%
     autofit()
 tabgre
 
+```
+<br>
 
-# GRáfico GRE
+```{r GRE_calc, echo=FALSE,include=FALSE}
+
+#Media
+GRE <- d_anual %>% select(gre) %>% pull()
+
+#variação
+GRE_var <- ((GRE[6]/GRE[4])-1)*100
+
+```
+
+|       O *gasto relativo com Energia Elétrica*, $GRE$ de 2021 até o mês de outubro foi apurado em `r format(GRE[6], big.mark=".", nsmall=2,digits=2)` $R\$/m^{2}$, enquanto o valor deste indicador foi de `r format(GRE[4], big.mark=".", nsmall=2,digits=2)` $R\$/m^{2}$ em 2019. A comparação destes anos indica uma retração de  `r round(GRE_var,1)`% do gasto relativo com energia elétrica. A evolução do indicador anualmente apurado pode ser visualizado no gráfico \@ref(fig:gGRE).
+
+```{r gGRE,fig.width= 7,fig.asp=0.65,fig.cap="$GRE$  2016 a 2021",echo = FALSE, message = FALSE}
 
 d_anual %>%  ggplot(aes(x=ano,y=gre, group = 1))+ theme_bw()+
   geom_line(size = 1.1,color=asspe_colors[3])+ 
@@ -449,9 +711,19 @@ d_anual %>%  ggplot(aes(x=ano,y=gre, group = 1))+ theme_bw()+
                      labels = function(x) format(x, big.mark = ".", scientific = FALSE),
                     limits=c(0,21) )+ 
   xlab("Ano")
+```
 
+# Água e Esgoto
 
-# Consumo de ÁGUA - CA ----------------------------------------
+|       Os resultados relativos ao item 8 - Água e Esgoto serão apresentados utilizando os indicadores *8.1 - CA – Consumo de água* e *8.3 - GA – Gasto com água*. Devem ser considerados todos os edifícios e unidades que compõem o órgão e os valores são mensurados pela **SAM** no TRE-SP. 
+
+##  Consumo de água ($CA$)
+
+**Definição**: consumo total de água fornecida pela concessionária.
+
+Unidade de medida: $m^3$
+
+```{r tabCA, echo=FALSE, paged.print=TRUE, results='asis'}
 
 #Tabela CA
 tabCA <- d %>% select(ano, mes, ca) %>% spread(ano,ca) %>%
@@ -472,7 +744,12 @@ tabCA <- tabCA %>% flextable() %>%
   bold(bold = TRUE, i = nrow(tabCA)) %>%  autofit()
 tabCA
 
-#graf 19/21
+
+```
+<br>
+
+```{r gCA, fig.width= 7,fig.asp=0.65,fig.cap= "$CA$ - 2019 e 2021",echo=FALSE}
+
 filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ca, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
@@ -483,7 +760,20 @@ filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ca, group = ano))+ th
   scale_y_continuous(name=expression("CA"~(m^{3})), labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
   xlab("Mês")
 
-#barplot Soma Ca
+```
+
+```{r CA_calc, echo=FALSE,include=FALSE}
+
+
+CA <- FunVar(d=d,indic = ca)
+
+```
+
+|       O consumo de água em 2021 continou sendo impactado fortemente pela pandemia. O volume total de água consumida entre os meses de janeiro a outubro  de 2019 foi `r format(CA$Indicador[1], big.mark=".",nsmall=1)` $m^3$ e `r format(CA$Indicador[2], big.mark=".",nsmall=1)` $m^3$ nos mesmos meses de 2021. Entre 2019 e 2021, houve a redução de `r round(CA$Ind_Var,1)`% no consumo absoluto de água.
+
+|     O consumo anual pode ser visto no gráfico \@ref(fig:caAc) a seguir.
+
+```{r caAc,fig.width= 7,fig.asp=0.65,fig.cap="$CA$ Total anual - 2016 a 2021",echo = FALSE, message = FALSE}
 
 d %>% group_by(ano) %>% summarise(ca = sum(ca)) %>%  
   ggplot(mapping=aes(x=ano, y=ca, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
@@ -494,13 +784,32 @@ d %>% group_by(ano) %>% summarise(ca = sum(ca)) %>%
     expression(atop("Consumo bruto anual"~CA,(m^{3})))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
-# variação até outubro 
-CA <- FunVar(d=d,indic = ca)
 
-## Consumo Relativo de água (CRA)
+```
 
-#Tabela cRA
 
+##  Consumo relativo de Água ($CRA$)
+
+
+**Definição**: consumo total de água fornecida pela concessionária em relação à área total do órgão.
+
+Unidade de medida: $m^{3}/m^{2}$
+
+Periodicidade da apuração: anual 
+
+Fórmula:	$$ CRA = \frac{CA}{m^{2}~Total}$$  onde:
+
+  * $CA$ – Consumo de água;
+  * $m^{2}~Total$ – Área total em metros quadrados (informado no Justiça em Números). 
+  
+|       A apuração do $CRA$ é dependente da áreas prediais das unidades pertencentes a este TRE. Essa informação é apurada anualmente pela **SGS** e informada no Justiça em Números.
+
+
+<br>
+
+|       A tabela \@ref(tab:tabCRA) apresenta a área total abarcada pelas unidades do TRE-SP ($m^{2}$) e o CRA ($m^{3}/m^{2}$) de 2016 a 2021.
+
+```{r tabCRA, echo=FALSE, paged.print=TRUE, results='asis'}
 tabcra <- d_anual %>% select(ano,m2Total,cra) %>% 
   rename(Ano = `ano`) %>% rename(`m2 Total` = m2Total) %>% 
   rename(CRA = `cra`) %>% 
@@ -512,10 +821,22 @@ tabcra <- d_anual %>% select(ano,m2Total,cra) %>%
   bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
   autofit()
 tabcra
+```
+<br>
 
+```{r CRA_calc, echo=FALSE,include=FALSE}
 
+#Media
+CRA <- d_anual %>% select(cra) %>% pull()
 
-# GRáfico CRA
+#variação
+CRA_var <- ((CRA[5]/CRA[3])-1)*100
+
+```
+
+|       O *Consumo relativo de água* é apresentado no gráfico \@ref(fig:gCRA). O $CRA$ de 2021 (janeiro a outubro) foi apurado em `r format(CRA[6], big.mark=".", nsmall=2,digits=2)` $m^{3}/m^{2}$, enquanto o valor deste indicador foi de `r format(CRA[4], big.mark=".", nsmall=2,digits=2)` $m^{3}/m^{2}$ em 2019. a comparação destes anos indica uma retração de  `r round(CRA_var,1)`% do consumo relativo de água.
+
+```{r gCRA,fig.width= 7,fig.asp=0.65,fig.cap="$CRA$  2016 a 2021",echo = FALSE, message = FALSE}
 
 d_anual %>%  ggplot(aes(x=ano,y=cra, group = 1))+ theme_bw()+
   geom_line(size = 1.1,color=asspe_colors[2])+ 
@@ -531,285 +852,6 @@ d_anual %>%  ggplot(aes(x=ano,y=cra, group = 1))+ theme_bw()+
                      limits = c(0,.3))+ 
   xlab("Ano")
 
+```
 
-# Gasto com água - GA ----------------------------------------
-
-
-#Tabela GA
-tabGA <- d %>% select(ano, mes, ga) %>% spread(ano,ga) %>%
-  #  mutate_at(vars(mes), funs(as.character(.))) %>%
-  bind_rows(summarise(.,mes = "Total",
-                      `2016` = sum(`2016`,na.rm = TRUE),
-                      `2017` = sum(`2017`,na.rm = TRUE),
-                      `2018` = sum(`2018`,na.rm = TRUE),
-                      `2019` = sum(`2019`,na.rm = TRUE), 
-                      `2020` =sum(`2020`,na.rm = TRUE),
-                      `2021` =sum(`2021`,na.rm = TRUE))) %>% 
-  rename(Mês = `mes`)
-tabGA <- tabGA %>% flextable() %>% 
-  colformat_double(j=c(2:7),big.mark=".",digits=2)  %>% 
-  set_caption( "Indicador 8.3 - GA \n (R$)") %>% 
-  align(align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
-  bold(bold = TRUE, i = nrow(tabGA)) %>%  autofit()
-tabGA
-
-#graf 19/21
-filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ga, group = ano))+ theme_bw()+
-  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
-  geom_point(aes(fill = ano),shape=21, size=3)+
-  geom_label_repel(aes(label=format(ga, big.mark = ".",digits=2,nsmall=2),fill= ano, fontface="bold"), 
-                   color="white",size=3)+
-  scale_color_manual(values = asspe_colors[c(5,2)])+
-  scale_fill_manual(values = asspe_colors[c(5,2)])+
-  #Aqui retira o formato de número científico
-  scale_y_continuous(name="GA\n(R$)", labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
-  xlab("Mês")
-
-#barplot Soma GA
-
-d %>% group_by(ano) %>% summarise(ga = sum(ga)) %>%  
-  ggplot(mapping=aes(x=ano, y=ga, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
-  geom_label_repel(aes(label=format(ga, big.mark = ".",digits = 2, nsmall = 2), fill= ano, fontface="bold"),
-                   color="white",vjust=0, size=3.5)+
-  scale_color_manual(values = asspe_colors)+
-  scale_fill_manual(values = asspe_colors)+ylab(
-    expression(atop("Consumo bruto anual"~GA,"(R$)"))) + xlab("Ano")+
-  scale_y_continuous(labels = function(x) format(x, big.mark = ".",
-                                                 scientific = FALSE))
-
-# variação até outubro 
-GA <- FunVar(d=d,indic = ga)
-
-## Gasto Relativo com água (GRA)
-
-#tabela
-tabgra <- d_anual %>% select(ano,m2Total,gra) %>% 
-  rename(Ano = `ano`) %>% rename(`m2 Total` = m2Total) %>% 
-  rename(`GRA` = gra) %>% 
-  flextable() %>% 
-  colformat_double(j=c(2),big.mark=".",digits=0)  %>% 
-  colformat_double(j=c(3),big.mark=".",digits=2)  %>% 
-  set_caption( "Área total das Unidades do TRE-SP e indicador 8.4 -  GRA") %>% 
-  align(j=1, align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
-  autofit()
-tabgra
-
-
-# GRáfico GRA
-
-d_anual %>%  ggplot(aes(x=ano,y=gra, group = 1))+ theme_bw()+
-  geom_line(size = 1.1,color=asspe_colors[2])+ 
-  geom_point(fill = asspe_colors[2],shape=21, size=5)+
-  geom_label_repel(aes(label=format(gra, big.mark = ".",nsmall=2, digits=2)),
-                   fill= asspe_colors[2], fontface="bold", 
-                   color="white",size=3.8)+
-  
-  #Aqui retira o formato de número científico
-  scale_y_continuous(name=
-                       expression(atop("GRA","R$"/m^{2}~Total)), 
-                     labels = function(x) format(x, big.mark = ".", scientific = FALSE),
-                     limits=c(0,6) )+ 
-  xlab("Ano")
-
-# Total de material para reciclagem ---------------------------------------
-
-#Modelo 4
-
-#Tabela geral com os indicadores que formam a TMR
-
-tabTMR <- d %>% filter(ano %in% c("2019","2021")) %>% 
-  select(mes,ano,dpa, dpl, dmt, dvd,cge,tmr) %>% 
-  mutate(Mês = paste(mes,"/",ano,sep="")) %>% select(-mes,-ano) %>% 
-  relocate(Mês,.before = dpa) %>% rename("Dpa" = `dpa`,"Dpl"=`dpl`,"Dmt"=`dmt`,
-                                      "Dvd"=`dvd`,"Cge"=`cge`,"TMR"=`tmr`) %>% 
-  flextable() %>% 
-  colformat_double(j=c(2:7),big.mark=".", 
-                decimal.mark = ",",digits=0)  %>% 
-  set_caption( "Indicadores componentes\n9.6 - Total de material para reciclagem \n(Kg)") %>% 
-  align(j=1, align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% 
-  valign(valign = "center", part = "all") %>%  autofit()
-tabTMR
-
-
-#Tabela com a soma dos indicadores componentes do TMR
-
-tabCompTMR <- d %>% filter(ano %in% 2016:2021) %>%  
-  select(ano,dpa, dpl, dmt, dvd,cge) %>% group_by(ano) %>%
-  summarise_all(.funs = sum) %>% 
-rename("Dpa" = `dpa`,"Dpl"=`dpl`,"Dmt"=`dmt`,
-                                      "Dvd"=`dvd`,"Cge"=`cge`) %>% 
-  flextable() %>% 
-  colformat_double(j=c(2:6),big.mark=".",digits=0)  %>% 
-  set_caption( "Indicadores de coletas de resíduos - Totais Anuais (kg)") %>% 
-  align(j=1, align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% 
-  valign(valign = "center", part = "all") %>%  autofit()
-tabCompTMR
-
-
-
-#Gráfico do TMR
-
-d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=tmr, group = ano))+ theme_bw()+
-  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
-  geom_point(aes(fill = ano),shape=21, size=3)+
-  geom_label_repel(aes(label=format(tmr, big.mark = ".", digits = 0),
-                       fill= ano, fontface="bold"), color="white",size=3.75)+
-  scale_color_manual(values = asspe_colors[c(2,3)])+
-  scale_fill_manual(values = asspe_colors[c(2,3)])+
-  #Aqui retira o formato de número científico
-  scale_y_continuous(name= "TMR\n(Kg)", 
-                     labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
-  xlab("Mês")
-
-
-# variação até outubro 
-TMR <- FunVar(d=d,indic = tmr,Soma = FALSE)
-
-
-
-# Destinação de Resíduos de saúde ---------------------------------------
-
-
-
-#Tabela
-tabDrs <- d %>% select(ano, mes, drs) %>% spread(ano,drs) %>% 
-  bind_rows(summarise(.,mes = "Total",
-                      `2016` = sum(`2016`,na.rm = TRUE),
-                      `2017` = sum(`2017`,na.rm = TRUE),
-                      `2018` = sum(`2018`,na.rm = TRUE),
-                      `2019` = sum(`2019`,na.rm = TRUE), 
-                      `2020` =sum(`2020`,na.rm = TRUE),
-                      `2021` =sum(`2021`,na.rm = TRUE))) %>% rename(Mês = `mes`)
-tabDrs <- tabDrs %>% flextable() %>% 
-  colformat_double(j=c(2:7),big.mark=".",digits=1)  %>% 
-  set_caption( "Indicador 9.11 - Destinação de resíduos de saúde - $D_{rs}$\n(Kg)") %>% 
-  align(j=1, align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% 
-  valign( valign = "center", part = "all") %>%  
-  bold(bold = TRUE, i  = nrow(tabDrs)) %>% 
-  autofit()
-tabDrs
-
-
-#Gráfico do DRS
-
-d %>% filter(ano %in% c("2019","2021")) %>% 
-  ggplot(aes(x=mes,y=drs, group = ano))+ theme_bw()+
-  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
-  geom_point(aes(fill = ano),shape=21, size=3)+
-  geom_label_repel(aes(label=format(drs, big.mark = ".", digits = 1),
-                       fill= ano, fontface="bold"), 
-                   color="white",size=3.75)+
-  scale_color_manual(values = asspe_colors[c(2,3)])+
-  scale_fill_manual(values = asspe_colors[c(2,3)])+
-  #Aqui retira o formato de número científico
-  scale_y_continuous(name= expression(~D[rs]~"(Kg)"), 
-                     labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
-  xlab("Mês")
-
-# variação até outubro 
-DRS <- FunVar(d=d,indic = drs)
-
-
-# Consumo relativo de álcool e gasolina  -----------------------------------------------
-
-
-#Tabela dos Carros menos diesel
-
-
-tabveic <- PLS_veic %>% filter(ano %in% c("2019","2021")) %>% select(ano,vg,vet,vf,vh) %>% 
-  rename(Ano = `ano`)
-tabveic <- tabveic %>% flextable() %>% 
-  colformat_num(j=c(2:5),big.mark=".")  %>% 
-  set_caption( "Quantidade de veículos a álcool e/ou gasolina - TRE/SP") %>% 
-  align(j=1, align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% 
-  valign( valign = "center", part = "all") %>%  
-  autofit()
-tabveic
-
-#Tabela usando CRag
-tabCrag <- d %>% select(ano, mes, crag) %>% 
-    spread(ano,crag) %>%
-    rename(Mês = `mes`)%>% 
-    flextable() %>% 
-    colformat_double(j=c(2:7),big.mark=".",digits = 1) %>% 
-    set_caption( "Indicador 14.5 - Consumo relativo de álcool e gasolina - $CR_{ag}$ \n(l / veículo)") %>% 
-    align(j=1, align = "center",part = "all") %>% 
-    bold(bold = TRUE, part = "header") %>% 
-    valign( valign = "center", part = "all") %>%  
-    autofit()
-tabCrag
-
-
-#graf 19/21
-
-d %>% filter(ano %in% c("2019","2021")) %>% 
-  ggplot(aes(x=mes,y=crag, group = ano))+ theme_bw()+
-  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
-  geom_point(aes(fill = ano),shape=21, size=3)+
-  geom_label_repel(aes(label=format(crag, big.mark = ".", digits = 2),fill= ano, fontface="bold"), color="white")+
-  scale_color_manual(values = asspe_colors[c(2,5)])+
-  scale_fill_manual(values = asspe_colors[c(2,5)])+
-  #Aqui retira o formato de número científico
-  scale_y_continuous(name= expression(~ CR[ag] ~"\n(l/veículo)"), 
-                     labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
-  xlab("Mês")
-
-# variação até outubro 
-CRAG <- FunVar(d=d,indic = crag,Soma = FALSE)
-
-
-
-# Consumo relativo de diesel  -----------------------------------------------
-
-
-#Tabela dos veículos a diesel
-
-tabveicd <- PLS_veic %>% filter(ano %in% c("2019","2021")) %>% select(ano,vd) %>% 
-  rename(Ano = `ano`)
-tabveicd <- tabveicd %>% flextable() %>% 
-  colformat_num(j=c(2),big.mark=".")  %>% 
-  set_caption( "Quantidade de veículos a diesel - TRE/SP") %>% 
-  align(j=1, align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% 
-  valign( valign = "center", part = "all") %>%  
-  autofit()
-tabveicd
-
-
-#Tabela usando flextable
-tabCRd <- d %>% select(ano, mes, crd) %>% 
-  spread(ano,crd) %>% 
-  rename(Mês = `mes`)%>% 
-  flextable() %>% 
-  colformat_double(j=c(2:6),big.mark=".",digits=1)  %>% 
-  set_caption( "Indicador 14.5 - Consumo relativo de diesel- $CR_{d}$ \n(l / veículo)") %>% 
-  align(j=1, align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% 
-  valign( valign = "center", part = "all") %>%  
-  autofit()
-tabCRd
-
-
-#Gráfico
-
-d %>% filter(ano %in% c("2019","2021")) %>% 
-  ggplot(aes(x=mes,y=crd, group = ano))+ theme_bw()+
-  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
-  geom_point(aes(fill = ano),shape=21, size=3)+
-  geom_label_repel(aes(label=format(crd, big.mark = ".", digits = 2, nsmall = 1),fill= ano, fontface="bold"), color="white")+
-  scale_color_manual(values = asspe_colors[c(2,5)])+
-  scale_fill_manual(values = asspe_colors[c(2,5)])+
-  #Aqui retira o formato de número científico
-  scale_y_continuous(name= expression(~ CR[d] ~"\n(l/veículo)"), 
-                     labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
-  xlab("Mês")
-
-# variação até outubro 
-CRD <- FunVar(d=d,indic = crd,Soma = FALSE)
-
+|       O consumo relativo de água foi fortemente impactado pela pandemia sendo que o valor apurado parcialmente em 2021 representa cerca de 1/3 do observado em 2019.
