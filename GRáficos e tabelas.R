@@ -58,6 +58,35 @@ PLS_veic$ano=as.factor(PLS_veic$ano)
 asspe_colors <- c("#284194","#2191fb","#023618","#61988E","#ee7646","#820900")
 
 rm(PLS_Anuais_A_E,PLS_Totais)
+
+#Função para calcular a variação entre 2 meses
+# d: banco de dados
+# indic: nome indicador
+# Soma: se Falso, calcula a média
+
+FunVar <- function(d,indic, Soma = TRUE)
+{
+  indic = enquo(indic)
+  if(Soma == TRUE)
+  {
+    IND <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+    group_by(ano) %>% summarise('IND' = sum(!!indic)) %>% pull(IND)
+  }
+  else
+  {
+    IND <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+      group_by(ano) %>% summarise('IND' = mean(!!indic)) %>% pull(IND)
+  }
+  
+  IND_var <- ((IND[2]/IND[1])-1)*100
+  
+  list(Indicador = IND, Ind_Var=IND_var)
+}
+
+
+
+
+
 # Consumo de papel total (CPt) ---------------------------------------------------------------------
 
 
@@ -105,11 +134,7 @@ d %>% group_by(ano) %>% summarise(cpt = sum(cpt)) %>%
 
 ## variação até outubro
 
-CPt <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
-  group_by(ano) %>% summarise(CPt = sum(cpt)) %>% pull(CPt)
-
-CPt_var<- ((CPt[2]/CPt[1])-1)*100
-
+CPt <- FunVar(d=d,indic = cpt)
 
 
 # Gasto de papel próprio (GPp) ---------------------------------------------------------------------
@@ -157,10 +182,7 @@ d %>% group_by(ano) %>% summarise(gpp = sum(gpp)) %>%
 
 ## variação até outubro
 
-GPp <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
-  group_by(ano) %>% summarise(GPp = sum(gpp)) %>% pull(GPp)
-
-GPp_var<- ((GPp[2]/GPp[1])-1)*100
+GPp <- FunVar(d=d,indic = gpp)
 
 # Gastos Relativos Telefonia fixa - GRtf ----------------------------------------
 
@@ -199,11 +221,9 @@ d %>% group_by(ano) %>% summarise(grtf = mean(grtf)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
-# variação até outubro
-GRTf <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
-  group_by(ano) %>% summarise(GRTf = mean(grtf)) %>% pull(GRTf)
+# variação até outubro -  média
 
-GRTf_var<- ((GRTf[2]/GRTf[1])-1)*100
+GRTf <- FunVar(d=d,indic = grtf, Soma = FALSE)
 
 # Gastos Relativos Telefonia Móvel - GRTm ---------------------------------
 
@@ -242,11 +262,9 @@ d %>% group_by(ano) %>% summarise(grtm = mean(grtm)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
-# variação até outubro
-GRTm <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
-  group_by(ano) %>% summarise(GRTm = mean(grtm)) %>% pull(GRTm)
+# variação até outubro - média
 
-GRTm_var<- ((GRTm[2]/GRTm[1])-1)*100
+GRTm <- FunVar(d=d,indic = grtm, Soma = FALSE)
 
 # Consumo de Energia Elétrica - CE ----------------------------------------
 
@@ -258,10 +276,11 @@ tabCE <- d %>% select(ano, mes, cee) %>% spread(ano,cee) %>%
                       `2017` = sum(`2017`,na.rm = TRUE),
                       `2018` = sum(`2018`,na.rm = TRUE),
                       `2019` = sum(`2019`,na.rm = TRUE), 
-                      `2020` =sum(`2020`,na.rm = TRUE))) %>% 
+                      `2020` =sum(`2020`,na.rm = TRUE),
+                      `2021` =sum(`2021`,na.rm = TRUE))) %>% 
 rename(Mês = `mes`)
 tabCE <- tabCE %>% flextable() %>% 
-  colformat_double(j=c(2:6),big.mark=".",decimal.mark = ",",digits = 1)  %>% 
+  colformat_double(j=c(2:7),big.mark=".",decimal.mark = ",",digits = 1)  %>% 
   set_caption( "Indicador 7.1 - CE \n (KWh)") %>% 
   align(j=1, align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% 
@@ -270,8 +289,8 @@ tabCE <- tabCE %>% flextable() %>%
   autofit()
 tabCE
 
-#graf 18/20
-filter(d,ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=cee, group = ano))+ theme_bw()+
+#graf 19/21
+filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=cee, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
   geom_label_repel(aes(label=format(cee, big.mark = "."),fill= ano, fontface="bold"), color="white")+
@@ -285,13 +304,17 @@ filter(d,ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=cee, group = ano))+ t
 
 d %>% group_by(ano) %>% summarise(cee = sum(cee)) %>%  
   ggplot(mapping=aes(x=ano, y=cee, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
-  geom_label_repel(aes(label=format(cee, big.mark = ".",digits = 2, nsmall = 1), fill= ano, fontface="bold"),
-                   color="white",vjust=0)+
+  geom_label_repel(aes(label=format(cee, big.mark = ".",digits = 2, nsmall = 1),
+                       fill= ano, fontface="bold"),
+                   color = "white", vjust=0)+
   scale_color_manual(values = asspe_colors)+
   scale_fill_manual(values = asspe_colors)+ylab(
     expression(atop("Consumo bruto anual"~CE,"(KWh)"))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
+
+# variação até outubro
+CEE <- FunVar(d=d,indic = cee)
 
 ## Consumo Relativo de EE (CRE)
 
@@ -308,6 +331,7 @@ tabm2Tot <- d_anual %>% select(ano,m2Total,cre) %>%
   bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
   autofit()
 tabm2Tot
+
 #Evolução da área construída TRE
 ggplot(d_anual, aes(x=ano,y= m2Total, fill=ano))+ theme_bw()+
   geom_bar(stat='identity')+ 
@@ -336,7 +360,9 @@ d_anual %>%  ggplot(aes(x=ano,y=cre, group = 1))+ theme_bw()+
                        expression(atop("CRE",~KWh/m^{2}~Total)), 
                      labels = function(x) format(x, big.mark = ".", scientific = FALSE),
                      limits = c(0,35))+ 
-  xlab("Mês")
+  xlab("Ano")
+
+#Aqui não fiz a comparação entre os anos 19/21
 
 
 # Gasto de Energia Elétrica - GE ----------------------------------------
@@ -350,18 +376,19 @@ tabGE <- d %>% select(ano, mes, ge) %>% spread(ano,ge) %>%
                       `2017` = sum(`2017`,na.rm = TRUE),
                       `2018` = sum(`2018`,na.rm = TRUE),
                       `2019` = sum(`2019`,na.rm = TRUE), 
-                      `2020` =sum(`2020`,na.rm = TRUE))) %>% 
+                      `2020` =sum(`2020`,na.rm = TRUE),
+                      `2021` =sum(`2021`,na.rm = TRUE))) %>% 
   rename(Mês = `mes`)
 tabGE <- tabGE %>% flextable() %>% 
-  colformat_double(j=c(2:6),big.mark=".",digits=2)  %>% 
+  colformat_double(j=c(2:7),big.mark=".",digits=2)  %>% 
   set_caption( "Indicador 7.3 - GE \n (R$)") %>% 
   align(j=1, align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
   bold(bold = TRUE, i = nrow(tabGE)) %>%  autofit()
 tabGE
 
-#graf 18/20
-filter(d,ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=ge, group = ano))+ theme_bw()+
+#graf 19/21
+filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ge, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
   geom_label_repel(aes(label=format(ge, big.mark = ".",digits=2,nsmall=2),fill= ano, fontface="bold"), 
@@ -383,6 +410,8 @@ d %>% group_by(ano) %>% summarise(ge = sum(ge)) %>%
     expression(atop("Gasto bruto anual"~GE,"(R$)"))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
+# variação até outubro 
+GE <- FunVar(d=d,indic = ge)
 
 ## Gasto Relativo de EE (GRE)
 
@@ -422,23 +451,24 @@ d_anual %>%  ggplot(aes(x=ano,y=gre, group = 1))+ theme_bw()+
 #Tabela CA
 tabCA <- d %>% select(ano, mes, ca) %>% spread(ano,ca) %>%
   #  mutate_at(vars(mes), funs(as.character(.))) %>%
-  bind_rows(summarise(.,Ano = "Total",
+  bind_rows(summarise(.,mes = "Total",
                       `2016` = sum(`2016`,na.rm = TRUE),
                       `2017` = sum(`2017`,na.rm = TRUE),
                       `2018` = sum(`2018`,na.rm = TRUE),
                       `2019` = sum(`2019`,na.rm = TRUE), 
-                      `2020` =sum(`2020`,na.rm = TRUE))) %>% 
+                      `2020` =sum(`2020`,na.rm = TRUE),
+                      `2021` =sum(`2021`,na.rm = TRUE))) %>% 
   rename(Mês = `mes`)
 tabCA <- tabCA %>% flextable() %>% 
-  colformat_num(j=c(2:6),big.mark=".")  %>% 
+  colformat_num(j=c(2:7),big.mark=".")  %>% 
   set_caption( "Indicador 8.1 - CA\n($m^{3}$)") %>% 
   align(j=1, align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
   bold(bold = TRUE, i = nrow(tabCA)) %>%  autofit()
 tabCA
 
-#graf 18/20
-filter(d,ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=ca, group = ano))+ theme_bw()+
+#graf 19/21
+filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ca, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
   geom_label_repel(aes(label=format(ca, big.mark = "."),fill= ano, fontface="bold"), color="white")+
@@ -459,6 +489,8 @@ d %>% group_by(ano) %>% summarise(ca = sum(ca)) %>%
     expression(atop("Consumo bruto anual"~CE,"(KWh)"))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
+# variação até outubro 
+CA <- FunVar(d=d,indic = ca)
 
 ## Consumo Relativo de água (CRA)
 
@@ -506,18 +538,19 @@ tabGA <- d %>% select(ano, mes, ga) %>% spread(ano,ga) %>%
                       `2017` = sum(`2017`,na.rm = TRUE),
                       `2018` = sum(`2018`,na.rm = TRUE),
                       `2019` = sum(`2019`,na.rm = TRUE), 
-                      `2020` =sum(`2020`,na.rm = TRUE))) %>% 
+                      `2020` =sum(`2020`,na.rm = TRUE),
+                      `2021` =sum(`2021`,na.rm = TRUE))) %>% 
   rename(Mês = `mes`)
 tabGA <- tabGA %>% flextable() %>% 
-  colformat_double(j=c(2:6),big.mark=".",digits=2)  %>% 
+  colformat_double(j=c(2:7),big.mark=".",digits=2)  %>% 
   set_caption( "Indicador 8.3 - GA \n (R$)") %>% 
   align(j=1, align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
   bold(bold = TRUE, i = nrow(tabGA)) %>%  autofit()
 tabGA
 
-#graf 18/20
-filter(d,ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=ga, group = ano))+ theme_bw()+
+#graf 19/21
+filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ga, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
   geom_label_repel(aes(label=format(ga, big.mark = ".",digits=2,nsmall=2),fill= ano, fontface="bold"), 
@@ -539,6 +572,9 @@ d %>% group_by(ano) %>% summarise(ga = sum(ga)) %>%
     expression(atop("Consumo bruto anual"~GA,"(R$)"))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
+
+# variação até outubro 
+GA <- FunVar(d=d,indic = ga)
 
 ## Gasto Relativo com água (GRA)
 
@@ -578,7 +614,7 @@ d_anual %>%  ggplot(aes(x=ano,y=gra, group = 1))+ theme_bw()+
 
 #Tabela geral com os indicadores que formam a TMR
 
-tabTMR <- d %>% filter(ano %in% c("2018","2020")) %>% 
+tabTMR <- d %>% filter(ano %in% c("2019","2021")) %>% 
   select(mes,ano,dpa, dpl, dmt, dvd,cge,tmr) %>% 
   mutate(Mês = paste(mes,"/",ano,sep="")) %>% select(-mes,-ano) %>% 
   relocate(Mês,.before = dpa) %>% rename("Dpa" = `dpa`,"Dpl"=`dpl`,"Dmt"=`dmt`,
@@ -595,7 +631,7 @@ tabTMR
 
 #Tabela com a soma dos indicadores componentes do TMR
 
-tabCompTMR <- d %>% filter(ano %in% 2016:2020) %>%  
+tabCompTMR <- d %>% filter(ano %in% 2016:2021) %>%  
   select(ano,dpa, dpl, dmt, dvd,cge) %>% group_by(ano) %>%
   summarise_all(.funs = sum) %>% 
 rename("Dpa" = `dpa`,"Dpl"=`dpl`,"Dmt"=`dmt`,
@@ -612,7 +648,7 @@ tabCompTMR
 
 #Gráfico do TMR
 
-d %>% filter(ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=tmr, group = ano))+ theme_bw()+
+d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=tmr, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
   geom_label_repel(aes(label=format(tmr, big.mark = ".", digits = 0),
@@ -625,11 +661,8 @@ d %>% filter(ano %in% c("2018","2020")) %>% ggplot(aes(x=mes,y=tmr, group = ano)
   xlab("Mês")
 
 
-#Media
-tmr <- d %>% group_by(ano) %>% summarise(tmr = mean(tmr)) %>% pull
-
-#variação
-tmr_var <- ((tmr[5]/tmr[3])-1)*100
+# variação até outubro 
+TMR <- FunVar(d=d,indic = tmr,Soma = FALSE)
 
 
 
@@ -644,9 +677,10 @@ tabDrs <- d %>% select(ano, mes, drs) %>% spread(ano,drs) %>%
                       `2017` = sum(`2017`,na.rm = TRUE),
                       `2018` = sum(`2018`,na.rm = TRUE),
                       `2019` = sum(`2019`,na.rm = TRUE), 
-                      `2020` =sum(`2020`,na.rm = TRUE))) %>% rename(Mês = `mes`)
+                      `2020` =sum(`2020`,na.rm = TRUE),
+                      `2021` =sum(`2021`,na.rm = TRUE))) %>% rename(Mês = `mes`)
 tabDrs <- tabDrs %>% flextable() %>% 
-  colformat_double(j=c(2:6),big.mark=".",digits=1)  %>% 
+  colformat_double(j=c(2:7),big.mark=".",digits=1)  %>% 
   set_caption( "Indicador 9.11 - Destinação de resíduos de saúde - $D_{rs}$\n(Kg)") %>% 
   align(j=1, align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% 
@@ -658,7 +692,7 @@ tabDrs
 
 #Gráfico do DRS
 
-d %>% filter(ano %in% c("2018","2020")) %>% 
+d %>% filter(ano %in% c("2019","2021")) %>% 
   ggplot(aes(x=mes,y=drs, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
@@ -672,13 +706,8 @@ d %>% filter(ano %in% c("2018","2020")) %>%
                      labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
   xlab("Mês")
 
-
-#Cálculo  DRS
-#Soma
-DRS <- d %>% group_by(ano) %>% summarise(DRS = sum(drs)) %>% pull
-
-#variação
-DRS_var <- ((DRS[5]/DRS[3])-1)*100
+# variação até outubro 
+DRS <- FunVar(d=d,indic = drs)
 
 
 # Consumo relativo de álcool e gasolina  -----------------------------------------------
@@ -687,7 +716,7 @@ DRS_var <- ((DRS[5]/DRS[3])-1)*100
 #Tabela dos Carros menos diesel
 
 
-tabveic <- PLS_veic %>% filter(ano %in% c("2018","2020")) %>% select(ano,vg,vet,vf,vh) %>% 
+tabveic <- PLS_veic %>% filter(ano %in% c("2019","2021")) %>% select(ano,vg,vet,vf,vh) %>% 
   rename(Ano = `ano`)
 tabveic <- tabveic %>% flextable() %>% 
   colformat_num(j=c(2:5),big.mark=".")  %>% 
@@ -703,7 +732,7 @@ tabCrag <- d %>% select(ano, mes, crag) %>%
     spread(ano,crag) %>%
     rename(Mês = `mes`)%>% 
     flextable() %>% 
-    colformat_double(j=c(2:6),big.mark=".",digits = 1) %>% 
+    colformat_double(j=c(2:7),big.mark=".",digits = 1) %>% 
     set_caption( "Indicador 14.5 - Consumo relativo de álcool e gasolina - $CR_{ag}$ \n(l / veículo)") %>% 
     align(j=1, align = "center",part = "all") %>% 
     bold(bold = TRUE, part = "header") %>% 
@@ -712,13 +741,13 @@ tabCrag <- d %>% select(ano, mes, crag) %>%
 tabCrag
 
 
-#graf 18/20
+#graf 19/21
 
-d %>% filter(ano %in% c("2018","2020")) %>% 
+d %>% filter(ano %in% c("2019","2021")) %>% 
   ggplot(aes(x=mes,y=crag, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
-  geom_label_repel(aes(label=format(crag, big.mark = ".", digits = 1),fill= ano, fontface="bold"), color="white")+
+  geom_label_repel(aes(label=format(crag, big.mark = ".", digits = 2),fill= ano, fontface="bold"), color="white")+
   scale_color_manual(values = asspe_colors[c(2,5)])+
   scale_fill_manual(values = asspe_colors[c(2,5)])+
   #Aqui retira o formato de número científico
@@ -726,11 +755,8 @@ d %>% filter(ano %in% c("2018","2020")) %>%
                      labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
   xlab("Mês")
 
-#Media
-CRag <- d %>% group_by(ano) %>% summarise(CRag = mean(crag)) %>% pull
-
-#variação
-CRag_var <- ((CRag[5]/CRag[3])-1)*100
+# variação até outubro 
+CRAG <- FunVar(d=d,indic = crag,Soma = FALSE)
 
 
 
@@ -739,7 +765,7 @@ CRag_var <- ((CRag[5]/CRag[3])-1)*100
 
 #Tabela dos veículos a diesel
 
-tabveicd <- PLS_veic %>% filter(ano %in% c("2018","2020")) %>% select(ano,vd) %>% 
+tabveicd <- PLS_veic %>% filter(ano %in% c("2019","2021")) %>% select(ano,vd) %>% 
   rename(Ano = `ano`)
 tabveicd <- tabveicd %>% flextable() %>% 
   colformat_num(j=c(2),big.mark=".")  %>% 
@@ -767,7 +793,7 @@ tabCRd
 
 #Gráfico
 
-d %>% filter(ano %in% c("2018","2020")) %>% 
+d %>% filter(ano %in% c("2019","2021")) %>% 
   ggplot(aes(x=mes,y=crd, group = ano))+ theme_bw()+
   geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
@@ -779,9 +805,6 @@ d %>% filter(ano %in% c("2018","2020")) %>%
                      labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
   xlab("Mês")
 
-#Media
-CRd <- d %>% group_by(ano) %>% summarise(CRd = mean(crd)) %>% pull
-
-#variação
-CRd_var <- ((CRd[5]/CRd[3])-1)*100
+# variação até outubro 
+CRD <- FunVar(d=d,indic = crd,Soma = FALSE)
 
