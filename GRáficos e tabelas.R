@@ -6,7 +6,7 @@ library(ggrepel)
 library(RODBC)
 #library(ggQC)
 options(OutDec = ",")
-set_flextable_defaults(decimal.mark = ",",big.mark = ".")
+set_flextable_defaults(decimal.mark = ",",big.mark = ".",font.size=9)
 
 #Pegar os dados direto do access mensais
 chan1 <- odbcDriverConnect("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=F:/Documents/PLS.accdb")
@@ -548,7 +548,7 @@ tabGA <- d %>% select(ano, mes, ga) %>% spread(ano,ga) %>%
   rename(Mês = `mes`)
 tabGA <- tabGA %>% flextable() %>% 
   colformat_double(j=c(2:7),big.mark=".",digits=2)  %>% 
-  set_caption( "Indicador 8.3 - GA \n (R$)") %>% 
+  set_caption( "Indicador 8.3 - GA (R$)") %>% 
   align(align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
   bold(bold = TRUE, i = nrow(tabGA)) %>%  autofit()
@@ -570,8 +570,8 @@ filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ga, group = ano))+ th
 
 d %>% group_by(ano) %>% summarise(ga = sum(ga)) %>%  
   ggplot(mapping=aes(x=ano, y=ga, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
-  geom_label_repel(aes(label=format(ga, big.mark = ".",digits = 2, nsmall = 2), fill= ano, fontface="bold"),
-                   color="white",vjust=0, size=3.5)+
+  geom_label(aes(label=format(ga, big.mark = ".",digits = 2, nsmall = 2), fill= ano, fontface="bold"),
+                   color="white",vjust=2,size=3.5)+
   scale_color_manual(values = asspe_colors)+
   scale_fill_manual(values = asspe_colors)+ylab(
     expression(atop("Consumo bruto anual"~GA,"(R$)"))) + xlab("Ano")+
@@ -591,7 +591,7 @@ tabgra <- d_anual %>% select(ano,m2Total,gra) %>%
   colformat_double(j=c(2),big.mark=".",digits=0)  %>% 
   colformat_double(j=c(3),big.mark=".",digits=2)  %>% 
   set_caption( "Área total das Unidades do TRE-SP e indicador 8.4 -  GRA") %>% 
-  align(j=1, align = "center",part = "all") %>% 
+  align(align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
   autofit()
 tabgra
@@ -637,18 +637,17 @@ tabTMR
 #Tabela com a soma dos indicadores componentes do TMR
 
 tabCompTMR <- d %>% filter(ano %in% 2016:2021) %>%  
-  select(ano,dpa, dpl, dmt, dvd,cge) %>% group_by(ano) %>%
+  select(ano,dpa, dpl, dmt, dvd,cge, tmr) %>% group_by(ano) %>%
   summarise_all(.funs = sum) %>% 
-rename("Dpa" = `dpa`,"Dpl"=`dpl`,"Dmt"=`dmt`,
-                                      "Dvd"=`dvd`,"Cge"=`cge`) %>% 
+  rename("Dpa" = `dpa`,"Dpl"=`dpl`,"Dmt"=`dmt`,
+         "Dvd"=`dvd`,"Cge"=`cge`, "TMR" = `tmr`) %>% 
   flextable() %>% 
-  colformat_double(j=c(2:6),big.mark=".",digits=0)  %>% 
+  colformat_double(j=c(2:7),big.mark=".",digits=0)  %>% 
   set_caption( "Indicadores de coletas de resíduos - Totais Anuais (kg)") %>% 
-  align(j=1, align = "center",part = "all") %>% 
-  bold(bold = TRUE, part = "header") %>% 
+  align(align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% bold(j = c(7),bold = TRUE) %>% 
   valign(valign = "center", part = "all") %>%  autofit()
 tabCompTMR
-
 
 
 #Gráfico do TMR
@@ -667,7 +666,7 @@ d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=tmr, group = ano)
 
 
 # variação até outubro 
-TMR <- FunVar(d=d,indic = tmr,Soma = FALSE)
+TMR <- FunVar(d=d,indic = tmr)
 
 
 
@@ -686,8 +685,8 @@ tabDrs <- d %>% select(ano, mes, drs) %>% spread(ano,drs) %>%
                       `2021` =sum(`2021`,na.rm = TRUE))) %>% rename(Mês = `mes`)
 tabDrs <- tabDrs %>% flextable() %>% 
   colformat_double(j=c(2:7),big.mark=".",digits=1)  %>% 
-  set_caption( "Indicador 9.11 - Destinação de resíduos de saúde - $D_{rs}$\n(Kg)") %>% 
-  align(j=1, align = "center",part = "all") %>% 
+  set_caption( "Indicador 9.11 - Destinação de resíduos de saúde - Drs (Kg)") %>% 
+  align(align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% 
   valign( valign = "center", part = "all") %>%  
   bold(bold = TRUE, i  = nrow(tabDrs)) %>% 
@@ -722,11 +721,11 @@ DRS <- FunVar(d=d,indic = drs)
 
 
 tabveic <- PLS_veic %>% filter(ano %in% c("2019","2021")) %>% select(ano,vg,vet,vf,vh) %>% 
-  rename(Ano = `ano`)
+  rename(Ano = `ano`, VG = `vg`, VEt = `vet`, VF = `vf`, VH = `vh`)
 tabveic <- tabveic %>% flextable() %>% 
   colformat_num(j=c(2:5),big.mark=".")  %>% 
   set_caption( "Quantidade de veículos a álcool e/ou gasolina - TRE/SP") %>% 
-  align(j=1, align = "center",part = "all") %>% 
+  align(align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% 
   valign( valign = "center", part = "all") %>%  
   autofit()
@@ -738,8 +737,8 @@ tabCrag <- d %>% select(ano, mes, crag) %>%
     rename(Mês = `mes`)%>% 
     flextable() %>% 
     colformat_double(j=c(2:7),big.mark=".",digits = 1) %>% 
-    set_caption( "Indicador 14.5 - Consumo relativo de álcool e gasolina - $CR_{ag}$ \n(l / veículo)") %>% 
-    align(j=1, align = "center",part = "all") %>% 
+    set_caption( "Indicador 14.5 - Consumo relativo de álcool e gasolina - CRag (l/veículo)") %>% 
+    align(align = "center",part = "all") %>% 
     bold(bold = TRUE, part = "header") %>% 
     valign( valign = "center", part = "all") %>%  
     autofit()
@@ -771,11 +770,11 @@ CRAG <- FunVar(d=d,indic = crag,Soma = FALSE)
 #Tabela dos veículos a diesel
 
 tabveicd <- PLS_veic %>% filter(ano %in% c("2019","2021")) %>% select(ano,vd) %>% 
-  rename(Ano = `ano`)
+  rename(Ano = `ano`, VD = `vd`)
 tabveicd <- tabveicd %>% flextable() %>% 
   colformat_num(j=c(2),big.mark=".")  %>% 
   set_caption( "Quantidade de veículos a diesel - TRE/SP") %>% 
-  align(j=1, align = "center",part = "all") %>% 
+  align(align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% 
   valign( valign = "center", part = "all") %>%  
   autofit()
@@ -788,8 +787,8 @@ tabCRd <- d %>% select(ano, mes, crd) %>%
   rename(Mês = `mes`)%>% 
   flextable() %>% 
   colformat_double(j=c(2:6),big.mark=".",digits=1)  %>% 
-  set_caption( "Indicador 14.5 - Consumo relativo de diesel- $CR_{d}$ \n(l / veículo)") %>% 
-  align(j=1, align = "center",part = "all") %>% 
+  set_caption( "Indicador 14.5 - Consumo relativo de diesel- CRd (l/veículo)") %>% 
+  align(align = "center",part = "all") %>% 
   bold(bold = TRUE, part = "header") %>% 
   valign( valign = "center", part = "all") %>%  
   autofit()

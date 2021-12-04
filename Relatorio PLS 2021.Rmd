@@ -3,7 +3,11 @@ bookdown::word_document2:
   reference_docx: referencia.docx
 author: 
  - Núcleo de Estatística da Gestão Estratégica
- 
+
+language:
+  label:
+    fig: 'Figura '
+    tab: 'Tabela '
 
   
 
@@ -16,7 +20,9 @@ output:
     reference_docx: referencia.docx
     toc: true
 
-title: "Avaliação Indicadores PLS - Consolidação dos dados mensais até outubro/2021"
+title: "Avaliação dos Indicadores do PLS  \nResolução CNJ Nº 201/2015  \nConsolidação dos dados mensais até outubro/2021" 
+  
+# "Avaliação Indicadores PLS - Consolidação dos dados mensais até # #outubro/2021"
 always_allow_html: true
 ---
 
@@ -29,7 +35,7 @@ library(ggrepel)
 library(RODBC)
 #library(ggQC)
 options(OutDec = ",")
-set_flextable_defaults(decimal.mark = ",",big.mark = ".")
+set_flextable_defaults(decimal.mark = ",",big.mark = ".", font.size = 9)
 
 chan1 <- odbcDriverConnect("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=F:/Documents/PLS.accdb")
 PLS_Totais <- sqlFetch(chan1,"cons_todos_m")
@@ -830,7 +836,7 @@ tabcra
 CRA <- d_anual %>% select(cra) %>% pull()
 
 #variação
-CRA_var <- ((CRA[5]/CRA[3])-1)*100
+CRA_var <- ((CRA[6]/CRA[4])-1)*100
 
 ```
 
@@ -855,3 +861,454 @@ d_anual %>%  ggplot(aes(x=ano,y=cra, group = 1))+ theme_bw()+
 ```
 
 |       O consumo relativo de água foi fortemente impactado pela pandemia sendo que o valor apurado parcialmente em 2021 representa cerca de 1/3 do observado em 2019.
+
+
+##  Gasto com água ($GA$)
+
+**Definição**: valor da fatura de água e esgoto, em valores brutos. Considera-se evento gerador o mês de competência (ao qual a fatura corresponde).
+
+Unidade de medida: Reais
+
+|       A seguir serão apresentados o histórico de dados e a evolução gráfica dos gastos com água e esgoto do TRE-SP. A apuração destes indicadores é de responsabilidade da **SAM**.
+
+```{r tabGA, echo=FALSE, paged.print=TRUE, results='asis'}
+
+tabGA <- d %>% select(ano, mes, ga) %>% spread(ano,ga) %>%
+  #  mutate_at(vars(mes), funs(as.character(.))) %>%
+  bind_rows(summarise(.,mes = "Total",
+                      `2016` = sum(`2016`,na.rm = TRUE),
+                      `2017` = sum(`2017`,na.rm = TRUE),
+                      `2018` = sum(`2018`,na.rm = TRUE),
+                      `2019` = sum(`2019`,na.rm = TRUE), 
+                      `2020` =sum(`2020`,na.rm = TRUE),
+                      `2021` =sum(`2021`,na.rm = TRUE))) %>% 
+  rename(Mês = `mes`)
+tabGA <- tabGA %>% flextable() %>% 
+  colformat_double(j=c(2:7),big.mark=".",digits=2)  %>% 
+  set_caption( "Indicador 8.3 - GA (R$)") %>% 
+  align(align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
+  bold(bold = TRUE, i = nrow(tabGA)) %>%  autofit()
+tabGA
+
+```
+<br>
+
+```{r gGA, fig.width= 7,fig.asp=0.65,fig.cap= "$GA$ - 2019 e 2021",echo=FALSE}
+
+filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=ga, group = ano))+ theme_bw()+
+  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
+  geom_point(aes(fill = ano),shape=21, size=3)+
+  geom_label_repel(aes(label=format(ga, big.mark = ".",digits=2,nsmall=2),fill= ano, fontface="bold"), 
+                   color="white",size=3)+
+  scale_color_manual(values = asspe_colors[c(5,2)])+
+  scale_fill_manual(values = asspe_colors[c(5,2)])+
+  #Aqui retira o formato de número científico
+  scale_y_continuous(name="GA\n(R$)", labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
+  xlab("Mês")
+```
+
+```{r GA_calc, echo=FALSE,include=FALSE}
+
+# variação até outubro 
+GA <- FunVar(d=d,indic = ga)
+
+```
+
+|       O gasto anual com água  ainda foi impactado sobremaneira pela pandemia em 2021, como pôde ser visto no gráfico \@ref(fig:gCA). O valor acumulado entre os meses de janeiro e outurbro foi de R\$ `r format(GA$Indicador[1], big.mark=".",nsmall=2)`, R\$ `r format(GA$Indicador[2], big.mark=".",nsmall=2)` em 2019 e 2021, respectivamente. Na comparação houve redução de `r round(GA$Ind_Var,1)`% no gasto total entre esses dois períodos do estudo.
+
+|    A figura \@ref(fig:gGAAc) indica o gasto acumulado com o pagamento de faturas de água e esgoto anos de 2016 a 2021.
+
+
+```{r gGAAc, fig.width= 7,fig.asp=0.65,fig.cap= "$GA$ Total anual - 2016 a 2021",echo=FALSE,message = FALSE}
+
+d %>% group_by(ano) %>% summarise(ga = sum(ga)) %>%  
+  ggplot(mapping=aes(x=ano, y=ga, fill =ano)) + geom_bar(stat='identity')+ theme_bw()+
+  geom_label(aes(label=format(ga, big.mark = ".",digits = 2, nsmall = 2), fill= ano, fontface="bold"),
+                   color="white",vjust=2,size=3.5)+
+  scale_color_manual(values = asspe_colors)+
+  scale_fill_manual(values = asspe_colors)+ylab(
+    expression(atop("Consumo bruto anual"~GA,"(R$)"))) + xlab("Ano")+
+  scale_y_continuous(labels = function(x) format(x, big.mark = ".",
+                                                 scientific = FALSE))
+
+```
+
+##  Gasto relativo com água ($GRA$)
+
+
+**Definição**: valor da fatura de água e esgoto, em valores brutos, em relação à área total do órgão. Considera-se evento gerador o mês de competência (ao qual a fatura corresponde). 
+
+Unidade de medida: $R\$/m^{2}$
+
+Periodicidade da apuração: anual 
+
+Fórmula:	$$ GRA = \frac{GA}{m^{2}~Total}$$  onde:
+
+  * $GA$ – Gasto com água;
+  * $m^{2}~Total$ – Área total em metros quadrados (informado no Justiça em Números). 
+  
+|       A apuração do $GRA$ é dependente da áreas prediais das unidades pertencentes a este TRE. Essa informação é apurada anualmente pela **SGS** e informada no Justiça em Números.
+
+
+<br>
+
+|       A tabela \@ref(tab:tabGRA) apresenta a área total do TRE e o gasto relativo de água (GRA) apurado em cada ano desde 2016.    
+
+```{r tabGRA, echo=FALSE, paged.print=TRUE, results='asis'}
+tabgra <- d_anual %>% select(ano,m2Total,gra) %>% 
+  rename(Ano = `ano`) %>% rename(`m2 Total` = m2Total) %>% 
+  rename(`GRA` = gra) %>% 
+  flextable() %>% 
+  colformat_double(j=c(2),big.mark=".",digits=0)  %>% 
+  colformat_double(j=c(3),big.mark=".",digits=2)  %>% 
+  set_caption( "Área total das Unidades do TRE-SP e indicador 8.4 -  GRA") %>% 
+  align(align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% valign( valign = "center", part = "all") %>% 
+  autofit()
+tabgra
+
+```
+<br>
+
+```{r GRA_calc, echo=FALSE,include=FALSE}
+
+#Media
+GRA <- d_anual %>% select(gra) %>% pull()
+
+#variação
+GRA_var <- ((GRA[6]/GRA[4])-1)*100
+
+```
+
+|       O *gasto relativo com água* é apresentado no gráfico \@ref(fig:gGRA). O $GRA$ de 2021 (janeiro a outubro) foi apurado em `r format(GRA[6], big.mark=".", nsmall=2,digits=2)` $R\$/m^{2}$, enquanto o valor deste indicador foi de `r format(GRA[4], big.mark=".", nsmall=2,digits=2)` $R\$/m^{2}$ em 2019. A comparação entre esses anos, ainda que com dados parciais em 2021, indica uma retração de  `r round(GRA_var,1)`% do gasto relativo com água e esgoto por metro quadro.
+
+```{r gGRA,fig.width= 7,fig.asp=0.65,fig.cap="$GRA$  2016 a 2021",echo = FALSE, message = FALSE}
+
+d_anual %>%  ggplot(aes(x=ano,y=gra, group = 1))+ theme_bw()+
+  geom_line(size = 1.1,color=asspe_colors[2])+ 
+  geom_point(fill = asspe_colors[2],shape=21, size=5)+
+  geom_label_repel(aes(label=format(gra, big.mark = ".",nsmall=2, digits=2)),
+                   fill= asspe_colors[2], fontface="bold", 
+                   color="white",size=3.8)+
+  
+  #Aqui retira o formato de número científico
+  scale_y_continuous(name=
+                       expression(atop("GRA","R$"/m^{2}~Total)), 
+                     labels = function(x) format(x, big.mark = ".", scientific = FALSE),
+                     limits=c(0,6) )+ 
+  xlab("Ano")
+```
+
+# Gestão de Resíduos
+
+|       Os resultados relativos ao item 9 - Gestão de Resíduos serão apresentados utilizando os indicadores  *9.6 - TMR –  Total de materiais destinados à reciclagem* e *9.11 - $D_{rs}$ –  Destinação de resíduos de saúde*. O TRE vem informando, sistematicamente os indicadores *9.3 - $D_{mt}$ - Destinação de metais* e *9.5 - $C_{ge}$ - Coleta geral*. Os outros indicadores são englobados nestes dois e por isso, uma boa maneira de sintetizar os resultados é  analisar o **TMR**. Os indicadores de coleta de resíduos são informados pela **SGS**, exceto o indicador de resíduos de saúde, informado mensalmente pela **CAS/SGP**.
+
+
+
+## Total de Materiais destinados à reciclagem (TMR)
+
+*Definição*: quantidade total de resíduos recicláveis destinados a cooperativas, associações de catadores e empresas recicladoras.
+
+Unidade de medida: quilogramas (kg)
+
+Fórmula:	$$ TMR = D_{pa} + D_{pl} + D_{mt} + D_{vd} + C_{ge} $$  
+onde:
+
+  * $D_{pa}$: Destinação de papel para reciclagem;
+  * $D_{pl}$: Destinação de plásticos para reciclagem;
+  * $D_{mt}$: Destinação de metais para reciclagem;
+  * $D_{vd}$: Destinação de vidros para reciclagem e;
+  * $C_{Ge}$: Coleta geral.
+
+|       A tabela \@ref(tab:tabTMR) apresenta todos os indicadores que compõem o TMR apurados nos anos de 2019 e 2021.
+
+
+```{r tabTMR, echo=FALSE, paged.print=TRUE, results='asis'}
+
+#Tabela geral com os indicadores que formam a TMR
+
+tabTMR <- d %>% filter(ano %in% c("2019","2021")) %>% 
+  select(mes,ano,dpa, dpl, dmt, dvd,cge,tmr) %>% 
+  mutate(Mês = paste(mes,"/",ano,sep="")) %>% select(-mes,-ano) %>% 
+  relocate(Mês,.before = dpa) %>% rename("Dpa" = `dpa`,"Dpl"=`dpl`,"Dmt"=`dmt`,
+                                      "Dvd"=`dvd`,"Cge"=`cge`,"TMR"=`tmr`) %>% 
+  flextable() %>% 
+  colformat_double(j=c(2:7),big.mark=".", 
+                decimal.mark = ",",digits=0)  %>% 
+  set_caption( "Indicadores componentes\n9.6 - Total de material para reciclagem \n(Kg)") %>% 
+  align(j=1, align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% 
+  valign(valign = "center", part = "all") %>%  autofit()
+tabTMR
+
+
+```
+
+|       Como já foi mencionado, o TRE não mensura por individualmente os resíduos plásticos, vidro e papel, englobando-os na variável *9.5 - Coleta Geral* ($Cge$) por problemas pontuais. 
+
+|       A figura \@ref(fig:gTMR) indica os nos dois anos em análise.
+
+
+```{r gTMR, fig.width= 7,fig.asp=0.65,fig.cap= "TMR - 2019 e 2021",echo=FALSE}
+
+d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=tmr, group = ano))+ theme_bw()+
+  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
+  geom_point(aes(fill = ano),shape=21, size=3)+
+  geom_label_repel(aes(label=format(tmr, big.mark = ".", digits = 0),
+                       fill= ano, fontface="bold"), color="white",size=3.75)+
+  scale_color_manual(values = asspe_colors[c(2,3)])+
+  scale_fill_manual(values = asspe_colors[c(2,3)])+
+  #Aqui retira o formato de número científico
+  scale_y_continuous(name= "TMR\n(Kg)", 
+                     labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
+  xlab("Mês")
+
+```
+
+```{r TMR_calc, echo=FALSE,include=FALSE}
+
+# variação até outubro 
+TMR <- FunVar(d=d,indic = tmr)
+
+```
+
+|      O valor acumulado do indicador TMR no período de janeiro a outubro de 2019 e 2021 foi respectivamente de `r format(TMR$Indicador[1], big.mark=".", digits = 2, nsmall=1)` Kg e `r format(TMR$Indicador[2], big.mark=".", digits = 2, nsmall = 1)` Kg, de modo que foi observada a *redução* de `r round(TMR$Ind_Var,1)`%. Obviamente é o impacto direto da adoção do trabalho remoto em função da pandemia de Covid-19.
+
+|       Para efeito de sumarização, a tabela \@ref(tab:tabCompTMR) a seguir apresenta o histórico do total anual dos indicadores de coleta de resíduos, a saber, $Dpa$, $Dpl$, $Dmt$, $Dvd$, $Cge$ e o consolidado, o próprio $TMR$ para os anos de 2016 a 2021.
+
+```{r tabCompTMR, echo=FALSE, paged.print=TRUE, results='asis'}
+
+#Tabela geral com os indicadores que formam a TMR
+
+tabCompTMR <- d %>% filter(ano %in% 2016:2021) %>%  
+  select(ano,dpa, dpl, dmt, dvd,cge, tmr) %>% group_by(ano) %>%
+  summarise_all(.funs = sum) %>% 
+  rename("Dpa" = `dpa`,"Dpl"=`dpl`,"Dmt"=`dmt`,
+         "Dvd"=`dvd`,"Cge"=`cge`, "TMR" = `tmr`) %>% 
+  flextable() %>% 
+  colformat_double(j=c(2:7),big.mark=".",digits=0)  %>% 
+  set_caption( "Indicadores de coletas de resíduos - Totais Anuais (kg)") %>% 
+  align(align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% bold(j = c(7),bold = TRUE) %>% 
+  valign(valign = "center", part = "all") %>%  autofit()
+tabCompTMR
+
+```
+
+
+## Destinação de resíduos de saúde ($D_{rs}$)
+
+*Definição*: quantidade total de resíduos de serviços de saúde encaminhados para descontaminação e tratamento (Resolução Anvisa 358/2005), com exigência de Manifesto de Transporte de Resíduos.
+
+Unidade de medida: quilogramas (kg)
+
+|       Os dados referentes à apuração mensal de resíduos hospitalares coletados pelo **CAS/SGP** do TRE-SP é apresentado na tabela \@ref(tab:tabdrs) a seguir.
+
+```{r tabdrs, echo=FALSE, paged.print=TRUE, results='asis'}
+#Tabela
+tabDrs <- d %>% select(ano, mes, drs) %>% spread(ano,drs) %>% 
+  bind_rows(summarise(.,mes = "Total",
+                      `2016` = sum(`2016`,na.rm = TRUE),
+                      `2017` = sum(`2017`,na.rm = TRUE),
+                      `2018` = sum(`2018`,na.rm = TRUE),
+                      `2019` = sum(`2019`,na.rm = TRUE), 
+                      `2020` =sum(`2020`,na.rm = TRUE),
+                      `2021` =sum(`2021`,na.rm = TRUE))) %>% rename(Mês = `mes`)
+tabDrs <- tabDrs %>% flextable() %>% 
+  colformat_double(j=c(2:7),big.mark=".",digits=1)  %>% 
+  set_caption( "Indicador 9.11 - Destinação de resíduos de saúde - Drs (Kg)") %>% 
+  align(align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% 
+  valign( valign = "center", part = "all") %>%  
+  bold(bold = TRUE, i  = nrow(tabDrs)) %>% 
+  autofit()
+tabDrs
+
+```
+
+```{r Drs_calc, echo=FALSE,include=FALSE}
+DRS <- FunVar(d=d,indic = drs)
+
+```
+
+|       O resultado total de descarte de resíduos hospitalares no período de janeiro a outubro para os anos em análise, expresso em kg, foi de `r format(DRS$Indicador[1], big.mark=".", digits = 2, nsmall = 1)` kg e `r format(DRS$Indicador[2], big.mark=".", digits = 2, nsmall = 1)` kg para os anos de 2019 e 2021, respectivamente. Comparados esses anos, houve redução de `r round(DRS$Ind_Var,1)`% causado pelo trabalho remoto decorrente da pandemia de Covid-19
+
+|       A figura \@ref(fig:gDrs) indica a evolução do indicador ao longo dos meses dos anos de 2019 e 2021. 
+
+```{r gDrs, fig.width= 7,fig.asp=0.65,fig.cap= "$D_{rs}$ - 2019 e 2021",echo=FALSE}
+
+#Gráfico do DRS
+
+d %>% filter(ano %in% c("2019","2021")) %>% 
+  ggplot(aes(x=mes,y=drs, group = ano))+ theme_bw()+
+  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
+  geom_point(aes(fill = ano),shape=21, size=3)+
+  geom_label_repel(aes(label=format(drs, big.mark = ".", digits = 1),
+                       fill= ano, fontface="bold"), 
+                   color="white",size=3.75)+
+  scale_color_manual(values = asspe_colors[c(2,3)])+
+  scale_fill_manual(values = asspe_colors[c(2,3)])+
+  #Aqui retira o formato de número científico
+  scale_y_continuous(name= expression(~D[rs]~"(Kg)"), 
+                     labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
+  xlab("Mês")
+
+```
+
+
+# Combustível
+
+|       Os resultados relativos ao item 14 - Combustível serão apresentados utilizando os indicadores  *14.5 - $CR_{ag}$ –  Consumo relativo de álcool e gasolina* e *14.6 - $CR_{d}$ –  Consumo relativo de diesel*. Não será apresentado o indicador *14.7 - $CR_{gn}$ – Consumo relativo de gás natural*, pois o Tribunal não dispõe de veículos movido com esse combustível.  Os valores relativos ao consumo com combustível e quantidade de veículos são mensurados pela **SGS**.
+
+## Consumo relativo de álcool e gasolina - $CR_{ag}$
+
+*Definição*: quantidade relativa de litros de álcool e gasolina consumidos por cada veículo.
+
+Unidade de medida: litro (l) / veículo
+
+Fórmula:	$$ CR_{ag} = \frac{CG + CE_{t}}{VG+VE_{t}+VF+VH}$$  onde:
+
+  * $CG$: consumo de gasolina;
+  * $CE_{t}$: consumo de etanol;
+  * $VG$: veículos a gasolina;
+  * $VE_{t}$: veículos a etanol;
+  * $VF$: veículos *flex* e;
+  * $VH$: veículos híbridos.
+
+|       Dentre os veículos movidos a gasolina, etanol e *flex*, o TRE dispõe de **67 unidades em 2019 e 2021** (dados relativos ao Justiça em Números 2021), como indicado na tabela \@ref(tab:tabveic).
+
+ 
+```{r tabveic, echo=FALSE, paged.print=TRUE, results='asis'}
+ 
+tabveic <- PLS_veic %>% filter(ano %in% c("2019","2021")) %>% select(ano,vg,vet,vf,vh) %>% 
+  rename(Ano = `ano`, VG = `vg`, VEt = `vet`, VF = `vf`, VH = `vh`)
+tabveic <- tabveic %>% flextable() %>% 
+  colformat_num(j=c(2:5),big.mark=".")  %>% 
+  set_caption( "Quantidade de veículos a álcool e/ou gasolina - TRE/SP") %>% 
+  align(align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% 
+  valign( valign = "center", part = "all") %>%  
+  autofit()
+tabveic
+```
+<br>
+
+|       O cálculo do Consumo relativo de álcool e gasolina é apresentado na tabela \@ref(tab:tabCrag).
+
+```{r tabCrag, echo=FALSE, paged.print=TRUE, results='asis'}
+
+tabCrag <- d %>% select(ano, mes, crag) %>% 
+    spread(ano,crag) %>%
+    rename(Mês = `mes`)%>% 
+    flextable() %>% 
+    colformat_double(j=c(2:7),big.mark=".",digits = 1) %>% 
+    set_caption( "Indicador 14.5 - Consumo relativo de álcool e gasolina - CRag (l/veículo)") %>% 
+    align(align = "center",part = "all") %>% 
+    bold(bold = TRUE, part = "header") %>% 
+    valign( valign = "center", part = "all") %>%  
+    autofit()
+tabCrag
+```
+<br>
+
+```{r Crag_calc, echo=FALSE,include=FALSE}
+
+CRAG <- FunVar(d=d,indic = crag,Soma = FALSE)
+
+```
+|       A pandemia afetou muito o consumo médio de gasolina e álcool em 2020 e continuou assim em 2021. O resultado **médio** expresso em l por veículo foi de `r format(CRAG$Indicador[1], big.mark=".", digits = 2, nsmall=1)` l/veículo considerando janeiro a outubro de 2019 e `r format(CRAG$Indicador[2], big.mark=".", digits = 2, nsmall =1)` l/veículo para o mesmo período de 2021. Comparado os períodos em análise, houve redução de `r round(CRAG$Ind_Var,1)`% no consumo médio de álcool e gasolina.
+
+|       A evolução mensal desse indicador é apresentada na figura \@ref(fig:gCrag) a seguir para os anos de 2019 e 2021.
+
+
+```{r gCrag, fig.width= 7,fig.asp=0.65,fig.cap= "$CR_{ag}$ - 2019 e 2021",echo=FALSE}
+
+d %>% filter(ano %in% c("2019","2021")) %>% 
+  ggplot(aes(x=mes,y=crag, group = ano))+ theme_bw()+
+  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
+  geom_point(aes(fill = ano),shape=21, size=3)+
+  geom_label_repel(aes(label=format(crag, big.mark = ".", digits = 2),fill= ano, fontface="bold"), color="white")+
+  scale_color_manual(values = asspe_colors[c(2,5)])+
+  scale_fill_manual(values = asspe_colors[c(2,5)])+
+  #Aqui retira o formato de número científico
+  scale_y_continuous(name= expression(~ CR[ag] ~"\n(l/veículo)"), 
+                     labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
+  xlab("Mês")
+
+```
+
+## Consumo relativo de diesel - $CR_{d}$
+
+*Definição*: quantidade relativa de litros de diesel consumidos por cada veículo.
+
+Unidade de medida: litro (l) / veículo
+
+Fórmula:	$$ CR_{d} = \frac{CD}{VD}$$  onde:
+
+  * $CD$: consumo de diesel e;
+ 
+  * $VD$: veículos a diesel.
+
+|       O TRE dispunha de **10 veículos a diesel em 2019** e essa quantidade persiste até outubro de 2021, conforme pode ser visto na tabela \@ref(tab:tabveicd).
+
+ <br>
+ 
+```{r tabveicd, echo=FALSE, paged.print=TRUE, results='asis'}
+ 
+tabveicd <- PLS_veic %>% filter(ano %in% c("2019","2021")) %>% select(ano,vd) %>% 
+  rename(Ano = `ano`, VD = `vd`)
+tabveicd <- tabveicd %>% flextable() %>% 
+  colformat_num(j=c(2),big.mark=".")  %>% 
+  set_caption( "Quantidade de veículos a diesel - TRE/SP") %>% 
+  align(align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% 
+  valign( valign = "center", part = "all") %>%  
+  autofit()
+tabveicd
+```
+<br>
+
+|       O cálculo do Consumo relativo de diesel é apresentado na tabela \@ref(tab:tabCRd).
+
+```{r tabCRd, echo=FALSE, paged.print=TRUE, results='asis'}
+
+
+tabCRd <- d %>% select(ano, mes, crd) %>% 
+  spread(ano,crd) %>% 
+  rename(Mês = `mes`)%>% 
+  flextable() %>% 
+  colformat_double(j=c(2:6),big.mark=".",digits=1)  %>% 
+  set_caption( "Indicador 14.5 - Consumo relativo de diesel- CRd (l/veículo)") %>% 
+  align(align = "center",part = "all") %>% 
+  bold(bold = TRUE, part = "header") %>% 
+  valign( valign = "center", part = "all") %>%  
+  autofit()
+tabCRd
+```
+<br>
+
+```{r CRd, echo=FALSE,include=FALSE}
+
+CRD <- FunVar(d=d,indic = crd,Soma = FALSE)
+
+
+```
+|       O resultado **médio** expresso em l por veículo apurado no período de janeiro a outubro de 2019 e 2021 foi de `r format(CRD$Indicador[1], big.mark=".", digits = 2, nsmall=1)` l/veículo e `r format(CRD$Indicador[2], big.mark=".", digits = 2, nsmall=1)` l/veículo para os anos de 2019 e 2021, respectivamente. Nesse período houve redução de `r round(CRD$Ind_Var,1)`% no consumo médio de álcool e gasolina. A pandemia continuou afetando, também, o indicador $CR_d$, tal como visto no indicador $CR_{ag}$. a partir do mês de agosto há uma tendência no aumento do consumo relativo. A figura \@ref(fig:gCRd) mostra visualmente os resultados.
+
+```{r gCRd, fig.width= 7,fig.asp=0.65,fig.cap= "$CR_{d}$ 2019 a 2021",echo=FALSE}
+
+d %>% filter(ano %in% c("2019","2021")) %>% 
+  ggplot(aes(x=mes,y=crd, group = ano))+ theme_bw()+
+  geom_line(aes(color=ano, linetype = ano),size = 1.1)+ 
+  geom_point(aes(fill = ano),shape=21, size=3)+
+  geom_label_repel(aes(label=format(crd, big.mark = ".", digits = 2, nsmall = 1),fill= ano, fontface="bold"), color="white")+
+  scale_color_manual(values = asspe_colors[c(2,5)])+
+  scale_fill_manual(values = asspe_colors[c(2,5)])+
+  #Aqui retira o formato de número científico
+  scale_y_continuous(name= expression(~ CR[d] ~"\n(l/veículo)"), 
+                     labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
+  xlab("Mês")
+
+
+```
