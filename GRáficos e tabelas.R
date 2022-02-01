@@ -59,7 +59,7 @@ asspe_colors <- c("#284194","#2191fb","#023618","#61988E","#ee7646","#820900")
 
 rm(PLS_Anuais_A_E,PLS_Totais)
 
-#Função para calcular a variação entre 2 meses
+#Função para calcular a variação entre 2 anos
 # d: banco de dados
 # indic: nome indicador
 # Soma: se Falso, calcula a média
@@ -69,12 +69,12 @@ FunVar <- function(d,indic, Soma = TRUE)
   indic = enquo(indic)
   if(Soma == TRUE)
   {
-    IND <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+    IND <- d %>% filter(ano %in% c("2019","2021")) %>%  
     group_by(ano) %>% summarise('IND' = sum(!!indic)) %>% pull(IND)
   }
   else
   {
-    IND <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+    IND <- d %>% filter( ano %in% c("2019","2021")) %>%  
       group_by(ano) %>% summarise('IND' = mean(!!indic)) %>% pull(IND)
   }
   
@@ -113,7 +113,7 @@ filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=cpt, group = ano))+ t
   geom_line(aes(color=ano, 
                 linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
-  geom_label_repel(aes(label=format(cpt, big.mark = "."), fill= ano, fontface="bold"),color="white")+
+  geom_label_repel(aes(label=format(cpt, big.mark = "."), fill= ano, fontface="bold"),color="white", , size = 3)+
   scale_color_manual(values = asspe_colors[c(3,5)])+
   scale_fill_manual(values = asspe_colors[c(3,5)])+
   ylab("CPt\n(Resmas)") + xlab("Mês")+
@@ -132,7 +132,7 @@ d %>% group_by(ano) %>% summarise(cpt = sum(cpt)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
-## variação até outubro
+## variação 2019-2021
 
 CPt <- FunVar(d=d,indic = cpt)
 
@@ -180,7 +180,7 @@ d %>% group_by(ano) %>% summarise(gpp = sum(gpp)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
-## variação até outubro
+## variação 2019-2021
 
 GPp <- FunVar(d=d,indic = gpp)
 
@@ -221,7 +221,7 @@ d %>% group_by(ano) %>% summarise(grtf = mean(grtf)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
-# variação até outubro -  média
+# variação 2019-2021 -  média
 
 GRTf <- FunVar(d=d,indic = grtf, Soma = FALSE)
 
@@ -262,7 +262,7 @@ d %>% group_by(ano) %>% summarise(grtm = mean(grtm)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
-# variação até outubro - média
+# variação 2019 -2021- média
 
 GRTm <- FunVar(d=d,indic = grtm, Soma = FALSE)
 
@@ -313,7 +313,7 @@ d %>% group_by(ano) %>% summarise(cee = sum(cee)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
-# variação até outubro
+# variação 2019-2021
 CEE <- FunVar(d=d,indic = cee)
 
 ## Consumo Relativo de EE (CRE)
@@ -415,7 +415,7 @@ d %>% group_by(ano) %>% summarise(ge = sum(ge)) %>%
     expression(atop("Gasto bruto anual"~GE,"(R$)"))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
-# variação até outubro 
+# variação 2019-2021 
 GE <- FunVar(d=d,indic = ge)
 
 ## Gasto Relativo de EE (GRE)
@@ -494,7 +494,7 @@ d %>% group_by(ano) %>% summarise(ca = sum(ca)) %>%
     expression(atop("Consumo bruto anual"~CA,(m^{3})))) + xlab("Ano")+
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
-# variação até outubro 
+# variação 2019-2021 
 CA <- FunVar(d=d,indic = ca)
 
 ## Consumo Relativo de água (CRA)
@@ -578,7 +578,7 @@ d %>% group_by(ano) %>% summarise(ga = sum(ga)) %>%
   scale_y_continuous(labels = function(x) format(x, big.mark = ".",
                                                  scientific = FALSE))
 
-# variação até outubro 
+# variação 2019-2021 
 GA <- FunVar(d=d,indic = ga)
 
 ## Gasto Relativo com água (GRA)
@@ -665,7 +665,7 @@ d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=tmr, group = ano)
   xlab("Mês")
 
 
-# variação até outubro 
+# variação 2019-2021 
 TMR <- FunVar(d=d,indic = tmr)
 
 
@@ -710,7 +710,7 @@ d %>% filter(ano %in% c("2019","2021")) %>%
                      labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
   xlab("Mês")
 
-# variação até outubro 
+# variação 2019-2021 
 DRS <- FunVar(d=d,indic = drs)
 
 
@@ -759,7 +759,7 @@ d %>% filter(ano %in% c("2019","2021")) %>%
                      labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
   xlab("Mês")
 
-# variação até outubro 
+# variação 2019-2021 
 CRAG <- FunVar(d=d,indic = crag,Soma = FALSE)
 
 
@@ -809,6 +809,6 @@ d %>% filter(ano %in% c("2019","2021")) %>%
                      labels = function(x) format(x, big.mark = ".", scientific = FALSE))+ 
   xlab("Mês")
 
-# variação até outubro 
+# variação 2019-2021 
 CRD <- FunVar(d=d,indic = crd,Soma = FALSE)
 

@@ -97,12 +97,12 @@ FunVar <- function(d,indic, Soma = TRUE)
   indic = enquo(indic)
   if(Soma == TRUE)
   {
-    IND <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+    IND <- d %>% filter(ano %in% c("2019","2021")) %>%  
     group_by(ano) %>% summarise('IND' = sum(!!indic)) %>% pull(IND)
   }
   else
   {
-    IND <- d %>% filter(mes != c("Nov","Dez"), ano %in% c("2019","2021")) %>%  
+    IND <- d %>% filter( ano %in% c("2019","2021")) %>%  
       group_by(ano) %>% summarise('IND' = mean(!!indic)) %>% pull(IND)
   }
   
@@ -110,11 +110,12 @@ FunVar <- function(d,indic, Soma = TRUE)
   
   list(Indicador = IND, Ind_Var=IND_var)
 }
+
 ```
 
 # Objetivo
 
-|       Apresentar os resultados comparativos dos indicadores mensais disponíveis do Plano de Logística Sustentável (Resolução CNJ Nº 201/2015) até **outubro de 2021**. Para efeito de comparação, serão considerados dados referentes a 2019, ano não-eleitoral anterior a 2021,
+|       Apresentar os resultados comparativos dos indicadores mensais disponíveis do Plano de Logística Sustentável (Resolução CNJ Nº 201/2015) do ano de **2021**. Para efeito de comparação, serão considerados dados referentes a 2019, ano não-eleitoral anterior a 2021,
 
 |   É extremamente importante salientar que a pandemia de Covid-19 não estava estabelecida em 2019, de modo que as comparações serão, no geral, superlativas.
 
@@ -178,7 +179,7 @@ filter(d,ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=cpt, group = ano))+ t
   geom_line(aes(color=ano, 
                 linetype = ano),size = 1.1)+ 
   geom_point(aes(fill = ano),shape=21, size=3)+
-  geom_label_repel(aes(label=format(cpt, big.mark = "."), fill= ano, fontface="bold"),color="white")+
+  geom_label_repel(aes(label=format(cpt, big.mark = "."), fill= ano, fontface="bold"),color="white", size = 3)+
   scale_color_manual(values = asspe_colors[c(3,5)])+
   scale_fill_manual(values = asspe_colors[c(3,5)])+
   ylab("CPt\n(Resmas)") + xlab("Mês")+
@@ -206,7 +207,7 @@ CPt <- FunVar(d=d,indic = cpt)
 
 ```
 
-|       O agregado do consumo de papel total até outubro de em 2021 foi cerca de `r format(CPt$Indicador[2], big.mark=".")` resmas e no mesmo período de 2019, `r format(CPt$Indicador[1], big.mark=".")`, o que acarreta na **redução** de `r round(CPt$Ind_Var,1)`% entre esses dois períodos analisados.
+|       O agregado do consumo de papel total em 2021 foi de `r format(CPt$Indicador[2], big.mark=".")` resmas e no mesmo período de 2019, `r format(CPt$Indicador[1], big.mark=".")`, o que acarreta na **redução** de `r round(CPt$Ind_Var,1)`% entre esses dois períodos analisados.
 
 ##  Gasto com Papel Próprio ($GP_p$)
 
@@ -253,7 +254,7 @@ GPp <- FunVar(d=d,indic = gpp)
 
 ```
 
-|       O gasto de papel próprio total até outubro de 2021 foi de R\$ `r format(GPp$Indicador[2], big.mark=".", nsmall=2)` e em 2019 no mesmo período, R\$ `r format(GPp$Indicador[1], big.mark=".", nsmall=2)`, o que resultou na **redução** de `r round(GPp$Ind_Var,1)`%.
+|       O gasto de papel próprio total em 2021 foi de R\$ `r format(GPp$Indicador[2], big.mark=".", nsmall=2)` e em 2019, R\$ `r format(GPp$Indicador[1], big.mark=".", nsmall=2)`, o que resultou na **redução** de `r round(GPp$Ind_Var,1)`%.
 
 ```{r gGPp,,fig.width= 7,fig.asp=0.65,fig.cap="$GP_p$ - 2019 e 2021",echo=FALSE}
 
@@ -271,7 +272,7 @@ d %>% filter(ano %in% c("2019","2021")) %>% ggplot(aes(x=mes,y=gpp, group = ano)
 
 
 ```
-0
+
 ```{r gGPpAc,fig.width= 7,fig.asp=0.65,fig.cap="$GP_p$ acumulado - 2016 a 2021",echo = FALSE, message = FALSE}
 
 d %>% group_by(ano) %>% summarise(gpp = sum(gpp)) %>%  
@@ -338,7 +339,7 @@ GRTf <- FunVar(d=d,indic = grtf, Soma = FALSE)
 
 ```
 
-|       O *gasto relativo médio de telefonia fixa* até outubro de 2021 foi cerca de R\$ `r format(GRTf$Indicador[2], big.mark=".", digits=2, nsmall=2)` e a média de janeiro a outubro de 2021, R\$ `r format(GRTf$Indicador[1], big.mark=".", digits=2, nsmall=2)`, de modo que a *redução* de `r round(GRTf$Ind_Var,1)`% foi observada.
+|       O *gasto relativo médio de telefonia fixa* em 2021 foi cerca de R\$ `r format(GRTf$Indicador[2], big.mark=".", digits=2, nsmall=2)` e a média de 2019, R\$ `r format(GRTf$Indicador[1], big.mark=".", digits=2, nsmall=2)`, de modo que a *redução* de `r round(GRTf$Ind_Var,1)`% foi observada.
 
 |       A ilustração a seguir representa a evolução dos gastos médios com Telefonia fixa desde 2016.
 
@@ -411,7 +412,7 @@ GRTm <- FunVar(d=d,indic = grtm, Soma = FALSE)
 
 ```
 
-|       O gasto relativo médio de telefonia móvel de janeiro a outubro de 2019 e 2021 foram de  R\$ `r format(GRTm$Indicador[1], big.mark=".", nsmall=2,digits=2)` e R\$ `r format(GRTm$Indicador[2], big.mark=".", nsmall=2,digits=2)`, respectivamente, com *redução* de `r round(GRTm$Ind_Var,1)`%, ainda que tenha havido um aumento significativo do número de linhas. 
+|       O gasto relativo médio de telefonia móvel de 2019 e 2021 foram de  R\$ `r format(GRTm$Indicador[1], big.mark=".", nsmall=2,digits=2)` e R\$ `r format(GRTm$Indicador[2], big.mark=".", nsmall=2,digits=2)`, respectivamente, com *redução* de `r round(GRTm$Ind_Var,1)`%, ainda que tenha havido um aumento significativo do número de linhas. 
 
 |       Vale salientar que o valor médio apurado em agosto de 2021, de R$ 2,14, bem discrepante dos demais, deveu-se ao pagamento das faturas *pro-rata* após a contratação de novas linhas móveis.
 
